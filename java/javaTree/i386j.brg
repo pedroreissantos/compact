@@ -1,0 +1,245 @@
+%{
+/* compile with: pburg -J -Jclass=Optimizer */
+import java.io.*;
+%}
+%include "ParserOpt.java"
+%%
+stat:  PROGRAM(stat,stat)
+stat:  END
+stat:  STRING 1 { String l = mklbl(parser.newlbl()); out.println(" segment .rodata\n align 4\n"+l+": db '"+p.text()+"', 10, 0\n segment .text\n push dword $"+l+"\n call _prints\n add esp,4\n call _println"); }
+stat:  PRINT(reg) 1 { out.println(" push dword "+name[p.place(p.left().place())]+"\n call _printi\n call _println\n add esp, 4"); busy[p.left().place()]=0; }
+stat:  READ 1 { out.println(" call _readi\n mov ["+p.left().text()+"], eax"); }
+stat:  JZ(reg,ETIQ) 1 {
+		out.println(" jz "+name[p.place(p.left().place())]+", "+p.right().text());
+                busy[p.left().place()]=0; /* liberta registo filho 1 */ }
+stat:  JNZ(reg,ETIQ) 1 {
+		out.println(" jnz "+name[p.place(p.left().place())]+", "+p.right().text());
+                busy[p.left().place()]=0; /* liberta registo filho 1 */ }
+stat:  JMP 1 { out.println(" jmp "+p.text()); }
+stat:  LABEL { out.println(p.text()+":"); }
+stat:  ASSIGN(VARIABLE,reg)   19 { 
+                out.println(" mov ["+p.left().text()+"], "+name[p.right().place()]);
+                busy[p.right().place()]=0; /* liberta registo filho 1 */ }
+stat:  ASSIGN(VARIABLE,INTEGER) 20 {
+		out.println(" mov ["+p.left().text()+"], dword "+p.right().value()); }
+stat:   JZ(LT(reg,reg), ETIQ)    2 { jcond(p, "jge"); }
+stat:   JZ(LE(reg,reg), ETIQ)    2 { jcond(p, "jg"); }
+stat:   JZ(GT(reg,reg), ETIQ)    2 { jcond(p, "jle"); }
+stat:   JZ(GE(reg,reg), ETIQ)    2 { jcond(p, "jl"); }
+stat:   JZ(EQ(reg,reg), ETIQ)    2 { jcond(p, "jne"); }
+stat:   JZ(NE(reg,reg), ETIQ)    2 { jcond(p, "jeq"); }
+stat:   JNZ(LT(reg,reg), ETIQ)    2 { jcond(p, "jl"); }
+stat:   JNZ(LE(reg,reg), ETIQ)    2 { jcond(p, "jle"); }
+stat:   JNZ(GT(reg,reg), ETIQ)    2 { jcond(p, "jg"); }
+stat:   JNZ(GE(reg,reg), ETIQ)    2 { jcond(p, "jge"); }
+stat:   JNZ(EQ(reg,reg), ETIQ)    2 { jcond(p, "jeq"); }
+stat:   JNZ(NE(reg,reg), ETIQ)    2 { jcond(p, "jne"); }
+
+stat:  reg { busy[p.place()] = 0; /* free reg */ }
+reg:   mem 18 { out.println(" mov "+name[p.place(getReg())]+", mem"); }
+reg:   VARIABLE 18 { out.println(" mov "+name[p.place(getReg())]+", ["+p.text()+"]"); }
+reg:   INTEGER 4 { out.println(" mov "+name[p.place(getReg())]+", "+p.value()); }
+reg:   ADD(reg,reg)     3 { binop("add", p); }
+reg:   ADD(reg,INTEGER)   4 {
+                out.println(" add "+name[p.place(p.left().place())]+", "+p.right().value()); }
+reg:   ADD(reg,mem)     19 {
+                out.println(" add "+name[p.place(p.left().place())]+", mem"); }
+reg:   SUB(reg,reg)    3 { binop("sub", p); }
+reg:   SUB(reg,INTEGER)  4 {
+                out.println(" sub "+name[p.place(p.left().place())]+", "+p.right().value()); }
+reg:   SUB(reg,mem)    19 {
+                out.println(" sub "+name[p.place(p.left().place())]+", mem"); }
+reg:   UMINUS(reg)       3 {
+                out.println(" neg "+name[p.place(p.left().place())]); }
+
+reg:   MUL(reg,reg)   3 { binop("imul", p); }
+reg:   DIV(reg,reg)   3 { idiv(0, p); }
+reg:   MOD(reg,reg)   3 { idiv(1, p); }
+reg:   EQ(reg,reg)    3 { setcond(p, "e"); }
+reg:   NE(reg,reg)    3 { setcond(p, "ne"); }
+reg:   LT(reg,reg)    3 { setcond(p, "l"); }
+reg:   LE(reg,reg)    3 { setcond(p, "le"); }
+reg:   GE(reg,reg)    3 { setcond(p, "ge"); }
+reg:   GT(reg,reg)    3 { setcond(p, "g"); }
+mem:   reg               19 {
+                out.println(" mov mem, "+name[p.left().place()]);
+                busy[p.left().place()]=0; /* liberta registo filho 1 */ }
+mem:   INTEGER             20 { out.println(" mov mem, "+p.value()); }
+mem:   ADD(mem,reg)     30 {
+                out.println(" add mem, "+name[p.right().place()]);
+                busy[p.right().place()]=0; /* liberta registo filho 1 */ }
+mem:   ADD(mem,INTEGER)   31 { out.println(" add mem, "+p.right().value()); }
+mem:   SUB(mem,reg)    30 {
+                out.println(" sub mem, "+name[p.right().place()]);
+                busy[p.right().place()]=0; /* liberta registo filho 1 */ }
+mem:   SUB(mem,INTEGER)  31 { out.println(" sub mem, "+p.right().value()); }
+mem:   UMINUS(mem)       30 { out.println(" neg mem"); }
+
+stat:  ASSIGN(VARIABLE,ADD(VARIABLE,INTEGER))   1 {
+		if (p.left().text().compareTo(p.right().left().text()) != 0)
+			out.println(" add ["+p.left().text()+"], dword "+p.right().right().value()+" ; incr");
+		else {
+			int r = getReg();
+			out.println(" mov "+name[r]+", ["+p.right().left().text()+"]");
+			out.println(" add "+name[r]+", "+p.right().right().value());
+			out.println(" mov ["+p.left().text()+"], "+name[r]);
+			busy[r] = 0;
+		}
+	  }
+stat:   JZ(EQ(reg,INTEGER), ETIQ)    2 {
+  out.println(" cmp "+name[p.left().left().place()]+", "+p.left().right().value()+"\n jne "+p.right().text());
+  busy[p.left().left().place()] = 0;
+}
+stat:   JZ(GT(reg,INTEGER), ETIQ)    2 {
+  out.println(" cmp "+name[p.left().left().place()]+", "+p.left().right().value()+"\n jle "+p.right().text());
+  busy[p.left().left().place()] = 0;
+}
+%%
+
+/*
+ * reserva de registos greedy sem spilling.
+ * call não faz save do 'eax' porque são sempre instruções e não expressões.
+ * idiv spills and moves registers
+ * (only IMUL r/m32  is EDX:EAX := EAX * r/m dword; all others truncate)
+ */
+
+private static final String name[] = { "eax", "ecx", "edx", "ebx", "esi", "edi", "no-reg" };
+private static final String small[] = { "al", "cl", "dl", "bl", "al", "al", "no-reg" };
+private int busy[] = new int[7];
+
+private int lbl;
+private String mklbl(int n) { return "_L"+n; }
+
+private void setcond(Tree p, String cond) {
+  p.place(p.left().place());
+  out.println(" cmp "+name[p.place()]+", "+name[p.right().place()]+"\n mov "+name[p.place()]+", dword 0\n set"+cond+" "+small[p.place()]);
+  busy[p.right().place()]=0;
+}
+
+private void jcond(Tree p, String cond) {
+  out.println(" cmp "+ name[p.left().left().place()]+", "+
+	  name[p.left().right().place()]+"\n "+ cond+" "+
+	  p.right().text());
+  busy[p.left().left().place()] = 0;
+  busy[p.left().right().place()] = 0;
+}
+
+/* IMUL r32,r/m32 ; IMUL r32,imm32 ; IMUL r32,r/m32,imm32 (r32 = r_m32 * imm32) */
+private void binop(String op, Tree p) {
+  out.println(" "+op+" "+name[p.place(p.left().place())]
+			  +", "+name[p.right().place()]);
+  busy[p.right().place()]=0;
+}
+
+private void idiv(int op, Tree p) {
+  int spilleax = 0, spillecx = 0, spilledx = 0;
+  /* idiv r/m32 (uses edx:eax + r/m32 and gives quo=eax rem=edx) */
+  if (p.left().place() != 0) { /* dividend not in 'eax' */
+    if (p.right().place() == 0) {
+      out.println(" xchg eax, "+name[p.place(p.left().place())]);
+      p.right().place(p.left().place());
+      p.left().place(0);
+    }
+    else {
+      if (busy[0] != 0) { /* 'eax' is busy */
+	spilleax = 1;
+	out.println(" push eax ; spill");
+      }
+      out.println(" mov eax, "+name[p.left().place()]);
+    }
+  }
+  if (p.right().place() == 2) { /* divisor in 'edx', move it out */
+    int r = getReg();
+    if (r < 6) { /* move to a free reg */
+      busy[p.right().place()]=0;
+      p.right().place(r);
+      out.println(" mov "+name[p.right().place()]+", edx");
+    } else { /* spill ecx (or any other) and move divisor to it */
+      spillecx = 1;
+      out.println(" push ecx ; spill\n mov ecx, "+name[p.right().place()]);
+      busy[p.right().place()]=0;
+      p.right().place(2);
+    }
+  } else
+    if (busy[2] != 0) { /* 'edx' is busy */
+      spilledx = 1;
+      out.println(" push edx ; spill");
+    }
+  out.println(" cdq\n idiv "+name[p.right().place()]);
+  busy[p.left().place()]=0;
+  busy[p.right().place()]=0;
+  p.place(getReg());
+  out.println(" mov "+name[p.place()]+", "+(op == 0 ? "eax" : "edx"));
+  if (spillecx == 1) out.println(" pop ecx ; unspill");
+  if (spilledx == 1) out.println(" pop edx ; unspill");
+  if (spilleax == 1) out.println(" pop eax ; unspill");
+}
+
+private int getReg()
+{
+  int i;
+
+  for(i = 0; i < busy.length; i++)
+    if (busy[i] == 0) {
+      busy[i] = 1;
+      return i;
+    }
+  System.err.println("Registos esgotados");
+  return busy.length + 1;
+}
+
+public boolean evaluate() {
+  if (parser.yyparse() > 0) return false;
+  //if (errors) return false;
+  //if (trace)
+  System.err.println(parser.syntax());
+  out.println(" segment .text\n align 4\n global _main\n_main:");
+  //out.println(" segment .text\n align 4\n global _main:function\n_main:");
+  if (!select(parser.syntax()))
+          System.err.println("No match for start symbol");;
+  out.println(" mov eax, 0\n ret");
+  out.println(" segment .data");
+  for (String s: parser.symbols().keys()) out.println(" "+s+": dd 0");
+  out.println(" extern _prints\n extern _printi\n extern _println\n extern _readi");
+  return true;
+}
+
+  private PrintWriter out;
+  private ParserOpt parser;
+  public static String extension(String filename, String ext) {
+	  int pos = filename.lastIndexOf('.');
+	  if (pos == -1) return filename + "." + ext;
+	  else return filename.substring(0, pos) + ext;
+  }
+  Optimizer(Reader r, Writer w) {
+	  parser = new ParserOpt(r);
+	  out = new PrintWriter(w, true);
+  }
+
+  public static void main(String args[]) throws IOException {
+    Reader r = null;
+    Writer w = null;
+
+    if (args.length > 0)
+      try {
+	r = new FileReader(args[0]);
+      } catch (IOException e) {
+	System.err.println(e);
+	System.exit(1);
+      }
+    else
+      r = new InputStreamReader(System.in);
+
+    if (args.length > 1)
+      try {
+	w = new FileWriter(args[1]);
+      } catch (IOException e) {
+	System.err.println(e);
+	System.exit(1);
+      }
+    else
+      w = new PrintWriter(System.out);
+
+    Optimizer s = new Optimizer(r, w);
+    s.evaluate();
+  }

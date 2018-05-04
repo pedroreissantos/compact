@@ -1,0 +1,30 @@
+BIN=..\c++\Compact.exe
+#BIN=java -jar ..\java\\Compact.jar
+#BIN=..\c\compact.exe
+RUN=..\runtime\run.lib $(K32)
+K32=..\tools\KERNEL32.LIB
+EXT=.cpt
+SRC=div.exe ex.exe ex2.exe ex3.exe ex4.exe ex5.exe ex6.exe gcd.exe if.exe tri.exe
+
+.SUFFIXES: $(EXT) .asm .obj .exe
+LD=LINK /OUT:$@
+NASM=nasm -fwin32
+AS=$(NASM)
+
+all: $(SRC)
+
+.cpt.exe:
+	$(BIN) $<
+	$(NASM) $*.asm -o $*.obj
+	$(LD) $*.obj $(RUN)
+.cpt.asm:
+	$(BIN) $<
+.asm.obj:
+	$(NASM) $< -o $@
+.obj.exe:
+	$(LD) $*.obj $(RUN)
+
+clean:
+	del /F /Q *.obj *.asm *.exe *~
+
+.PHONY: all clean

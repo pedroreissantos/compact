@@ -1,0 +1,63 @@
+# make Compact.jar and then run the examples with the interpreter:
+# java -cp Compact.jar Interp ../examples/tri.cpt
+#
+# to create i386 executables:
+# Compile:	java -cp Compact.jar Compact tri.cpt
+#      or:      java -jar Compact.jar tri.cpt
+# Assemble:	nasm -felf tri.asm
+# Link:		ld -o tri tri.o ../runtime/lib.o ../runtime/linux.o
+# and run:	./tri
+ID=Compact
+EXT=.cpt
+VER=0a
+BID=$(ID)-$(VER)
+
+.SUFFIXES: $(EXT) .asm .java .class
+
+JAVAC=javac
+JRUN=java -jar $(ID).jar
+JFLEX=java -jar ..\tools\JFlex.jar
+BYACCJ=..\tools\byaccj.exe -J -Jsemantic=Node
+JAR=jar
+RUN=..\runtime\run.lib
+K32=..\tools\KERNEL32.LIB
+
+all: $(ID).jar $(RUN)
+
+$(ID).jar: Yylex.class Parser.class $(ID).class Interp.class
+	$(JAR) -cmf MANIFEST $@ *.class
+#	$(JAR) cmf MANIFEST $@ $(JAVA:.java=.class)
+
+Yylex.java: $(ID).l Parser.java
+	$(JFLEX) $(ID).l
+
+Parser.java: $(ID).y
+	$(BYACCJ) $?
+
+clean:
+	del /F /Q *.class Yylex.java Parser.java *~
+	-del /P $(ID).jar
+
+.java.class:
+	$(JAVAC) $?
+
+AS=nasm -fwin32
+AR=lib /nologo /out:$@
+LD=link /nologo /out:$@
+.asm.exe:
+	$(AS) $*.asm
+	$(LD) $*.obj $(RUN) $(K32)
+
+$(EXT).asm:
+	$(JRUN) $?
+
+
+..\runtime\lib.obj: ..\runtime\lib.asm
+	$(AS) $?
+..\runtime\win.obj: ..\runtime\win.asm
+	$(AS) $?
+LOBJ=..\runtime\lib.obj ..\runtime\win.obj
+$(RUN): $(LOBJ)
+	$(AR) $(LOBJ)
+
+.PHONY: all clean cleanall examples backup

@@ -1,0 +1,15 @@
+extern void exit();
+extern void prints(const char*);
+extern int readb();
+extern int argc();
+extern char *argv(int i);
+extern char *envp(int i);
+extern int strlen(const char *s);
+extern void println();
+extern void printsp();
+extern void debug();
+extern int atoi(char *s);
+extern char *itoa(int val);
+extern void printi(const int i);
+extern char *readln(char *buf, int siz);
+extern int readi();

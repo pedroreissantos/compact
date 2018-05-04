@@ -1,0 +1,4 @@
+program
+	read x;
+	print x;
+end

@@ -1,0 +1,66 @@
+ID=Compact
+EXT=.cpt
+VER=1a
+
+.SUFFIXES: $(EXT) .asm .obj .cpp
+CXX=cl /nologo
+CXXFLAGS=-GX -Yd -I..\tools
+COMPILE=$(CXX) $(CXXFLAGS) -c
+LEX=..\tools\flex++.exe
+YACC=..\tools\byacc.exe
+YFLAGS=-dv
+NASM=nasm -fwin32
+AS=$(NASM)
+LD=LINK /nologo /out:$@
+LINK=cl -Fe$@
+AR=LIB /nologo /out:$@
+MV=MOVE
+
+BID=$(ID)-$(VER)
+BIN=$(ID).exe
+RUN=../runtime
+RTL=$(RUN)/run.lib
+
+OBJ = Compact.obj Compiler.obj Interp.obj NodeAdd.obj NodeAssign.obj \
+      NodeBinary.obj Node.obj NodeData.obj NodeDiv.obj NodeEq.obj \
+      NodeGe.obj NodeGt.obj NodeIf.obj NodeIfelse.obj NodeInteger.obj \
+      NodeLe.obj NodeList.obj NodeLt.obj NodeMod.obj NodeMul.obj \
+      NodeNe.obj NodePrint.obj NodeRead.obj NodeReal.obj NodeString.obj \
+      NodeSub.obj NodeTernary.obj NodeUminus.obj NodeUnary.obj \
+      NodeVariable.obj NodeWhile.obj PFdebug.obj PFi386.obj Postfix.obj \
+      SymbolNode.obj Symbol.obj Tabid.obj y.tab.obj yyFlexLexer.obj main.obj
+
+all: $(BIN) $(RTL)
+
+.cpp.obj:
+	$(COMPILE) $?
+.asm.obj:
+	$(NASM) $?
+
+.asm.exe:
+	$(NASM) $?
+	$(LD) $*.o $(RTL)
+
+$(EXT).asm:
+	$(ID) $<
+
+$(BIN): $(OBJ)
+	$(LINK) $(OBJ)
+
+$(RTL): $(RUN)/lib.obj $(RUN)/win.obj
+	$(AR) $(RUN)/lib.obj $(RUN)/win.obj
+
+$(RUN)/%.obj:$(RUN)/%.asm
+	$(NASM) $?
+
+yyFlexLexer.cpp: $(ID).l y.tab.cpp
+	$(LEX) $(LFLAGS) $(ID).l
+
+y.tab.cpp: $(ID).y
+	$(YACC) $(YFLAGS) $(ID).y
+	$(MV) y.tab.c $@
+
+clean:
+	del /F /Q *.o core a.out $(BIN) y.tab.* lex.yy.* y.output *.asm $(OBJ)
+
+.PHONY: all clean

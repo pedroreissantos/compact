@@ -1,0 +1,10 @@
+program
+  x = 0;
+  read x;
+  if (x > 0)
+    print 'positivo';
+  if (x < 0)
+    print 'negativo';
+  if (x == 0)
+    print 'nulo';
+end

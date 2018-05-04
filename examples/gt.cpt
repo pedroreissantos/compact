@@ -1,0 +1,9 @@
+program
+  print 'Comparador: maior que';
+  print 'Introduza dois numeros';
+  a = 0;
+  b = 0;
+  read a;
+  read b;
+  print a > b;
+end

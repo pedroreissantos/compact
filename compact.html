@@ -1,0 +1,483 @@
+<HTML> <TITLE>Compact 2013</TITLE>
+<BODY BGCOLOR="B5BDD6" link=red vlink=green>
+<table border="0" width="100%" cellpadding="5" cellspacing="3">
+  <tr align="left" valign="middle"><td>
+  <IMG ALIGN=left SRC="istlogo.gif" ALT="IST"> </td>
+
+  <TD> <CENTER> <H1>COMPILADORES</H1> <H2>2012/2013</H2>
+  <H3> Departamento de Engenharia Inform&aacute;tica</H3> <BR> <BR>
+
+  <H2>1&ordf Aula de Laborat&oacute;rio: <U>compilador simples: COMPACT</U></H2>
+
+</CENTER> </TD> </TABLE> <HR size=2 noshade> <BR>
+
+
+<BR>
+<H3>1 - Objectivo</H3>
+<P>
+O objectivo desta aula &eacute; o aluno tomar contacto com um compilador
+muito simples.
+Desta forma torna-se mais f&aacute;cil compreender os processos e mecanismos
+utilizados:
+<OL>
+  <LI>Gera&ccedil;&atilde;o do compilador atrav&eacute;s
+  	compila&ccedil;&atilde;o dos ficheiros que o formam.
+  <LI>Utiliza&ccedil;&atilde;o do compilador gerado para produzir
+  	ficheiros execut&aacute;veis a partir de exemplos dados e
+	outros programas de teste que pretenda usar.
+  <LI>Ganhar sensibilidade aos v&aacute;rios componentes do compilador,
+	estabecendo a liga&ccedil;&atilde;o com os componentes apresentados
+	nas aulas te&oacute;ricas, embora n&atilde;o seja suposto compreender 
+	o seu funcionamento interno.
+</OL>
+<P>
+
+<H3>2 - A linguagem COMPACT</H3>
+<P>
+A linguagem <B>compact</B> tal como no projecto de avalia&ccedil;&atilde;o
+usa as ferramentas <B>lex</B>, <B>yacc</B> e <B>burg</B> para gerar
+c&oacute;digo execut&aacute;vel <B>i386</B>.
+A linguagem inclui express&otilde;es artim&eacute;ticas e de
+compara&ccedil;&atilde;o, instru&ccedil;&otilde;es condicionais e de ciclo,
+instru&ccedil;&otilde;es de leitura e escrita, bem como
+atribui&ccedil;&otilde;es.
+A sintaxe &eacute; muito semelhante &agrave; da linguagem <B>C</B>, por
+forma a facilitar a sua compreens&atilde;o.
+No entanto, a
+linguagem n&atilde;o suporta fun&ccedil;&otilde;es ou express&otilde;es
+l&oacute;gicas e tem um &uacute;nico tipo de dados (inteiro).
+<P>
+
+<H3>3 - Gera&ccedil;&atilde;o das bibliotecas</H3>
+<P>
+Para a gera&ccedil;&atilde;o do compilador sugere-se a utilza&ccedil;&atilde;o
+da <TT>Makefile</TT>, que depois de adaptada pode ser utilizada em outros
+projectos, nomeadamente no projecto de avalia&ccedil;&atilde;o.
+<P>
+Antes de gerar o compilador é necessário gerar
+a biblioteca de desenvolvimento compiladores (<B>-lutil</B>)
+e a biblioteca de execu&ccedil;&atilde;o da linguagem (<B>-lrun</B>)
+<P>
+A biblioteca de desenvolvimento do compilador
+reside no direct&oacute;rio <B>lib</B>,
+bastando executar o comando <B>make</B>
+nesse direct&oacute;rio ou executar os comandos:
+<OL>
+  <LI>compila&ccedil;&atilde;o das rotinas de suporte
+  &agrave; constru&ccedil;&atilde;o da &aacute;rvore sint&aacute;ctica (<B>node.c</B>), 
+  &agrave; constru&ccedil;&atilde;o da tabela de s&iacute;mbolos (<B>tabid.c</B>)
+  e rotinas auxiliares (<B>main.c</B>):
+  	<PRE>
+  	<B>prompt$ </B><I> gcc -g -c node.c tabid.c main.c</I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o da biblioteca:
+  	<PRE>
+  	<B>prompt$ </B><I> ar crl libutil.a node.o tabid.o main.o</I>
+  	</PRE>
+</OL>
+A biblioteca de desenvolvimento compilador inclui rotinas gen&eacute;ricas e
+que podem ser utilizadas por qualquer compilador gerado por este processo.
+<P>
+A biblioteca de execu&ccedil;&atilde;o da linguagem
+reside no direct&oacute;rio <B>runtime</B>.
+Por omiss&atilde;o, a <tt>Makefile</tt> utiliza o suporte para <b>i386</b>
+no direct&oacute;rio <b>linux32</b>.
+Os outros direct&oacute;rios geram a biblioteca de execu&ccedil;&atilde;o
+que permite executar os exemplos da linguagem <b>compact</b> nesses
+processadores ou sistemas operativos. Notar que essas bibliotecas podem
+exigir ferramentas e op&ccedil;&otilde;es que apenas existam nesses
+processadores ou sistemas operativos. A escolha do ambiente pode ser
+efectuada com a op&ccedil;&atilde;o <tt>SYS</tt> da <tt>Makefile</tt>.
+<p>
+O comando <tt>make install</tt> permite copiar a biblioteca para o
+direct&oacute;rio base (..).
+Para gerar a biblioteca basta executar o comando <B>make</B>
+nesse direct&oacute;rio ou executar os comandos:
+<OL>
+  <LI>compila&ccedil;&atilde;o das rotinas
+  de suporte ao arranque essenciais (<B>linux.asm</B>),
+  rotinas auxiliares (<B>lib.asm</B>) e
+  rotinas de interface com o sistema operativo (<B>sys.asm</B>),
+  todas codificadas em <I>assembly</I> <B>i386</B>,
+  além de rotinas de convers&atilde;o de n&uacute;meros reais em precis&atilde;o dupla (<B>dbl.c</B>),:
+  	<PRE>
+  	<B>prompt$ </B><I> nasm -felf linux.asm</I>
+  	<B>prompt$ </B><I> nasm -felf apart.asm</I>
+  	<B>prompt$ </B><I> nasm -felf sys.asm</I>
+  	<B>prompt$ </B><I> gcc -c -DPOSTFIX dbl.c</I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o da biblioteca:
+  	<PRE>
+  	<B>prompt$ </B><I> ar crl librun.a linux.o apart.o sys.o dbl.o</I>
+  	</PRE>
+</OL>
+Nos ambientes em que as rotinas s&atilde;o precedidas de
+underscore (_) pode ser necess&aacute;rio definir <tt>-Dunderscore</tt> na
+compila&ccedil;&atilde;o de ficheiros <b>C</b>. Em alguns sistemas, nomeadamente
+algumas vers&otilde;es de <b>Ubunto</b>, pode ser necess&aacute;rio definir
+<tt>-fno-stack-protector</tt> quando se obt&eacute;m o erro <b>__stack_chk_fail</b>. 
+<p>
+A biblioteca de execu&ccedil;&atilde;o da linguagem inclui as rotinas que
+podem ser invocadas pelos programas gerados pelo compilador e n&atilde;o
+pelo compilador.
+<OL>
+  <LI><B>linux.asm</B>: <TT>_start</TT> invoca a rotina principal da linguagem (<B>_main</B> no caso da linguagem <B>compact</B>);
+			<TT>prints</TT> imprime uma cadeia de caracteres terminada em zero;
+			<TT>readb</TT> l&ecirc; um &uacute;nico <I>byte</I>, devolvido como um inteiro;
+  <LI><B>lib.asm</B>: <TT>strlen</TT> e <TT>strlen</TT> como em <B>C</B>;
+			<TT>printi</TT>, <TT>printsp</TT> e <TT>println</TT> imprime um valor inteiro, um espa&ccdeil;o branco e uma mudan&ccedil;a de linha, respectivamente;
+			<TT>readi</TT> e <TT>readln</TT> l&ecirc; um valor inteiro e uma linha completa, respectivamente;
+			<TT>argc</TT>, <TT>argv</TT> e <TT>envp</TT> devolve o n&uacute;mero de argumentos, o n-&eacute;simo argumento (ou zero, se n&atilde;o existir) e a n-&eacute;sima vari&aacute;vel de ambiente (ou zero, se n&atilde;o existir), respectivamente;
+			<TT>itoa</TT> converte um valor inteiro numa cadeia de caracteres;
+  <LI><B>sys.asm</B>: inclui quase todas as chamadas ao sistema <B>unix</B> (ver <TT>man 2 intro</TT>), como acesso a ficheiros ou manipula&ccedil;&atilde;o de processos, entre outros;
+  <LI><B>dbl.c</B>: <TT>printd</TT> para imprimir valores reais em precis&ccedil;&atilde;o dupla,
+		    <TT>read</TT> para ler valores reais em precis&ccedil;&atilde;o dupla,
+		    <TT>atod</TT> converte uma cadeia de caractres para o seu valor real em precis&ccedil;&atilde;o dupla,
+		    <TT>dtoa</TT> converte um valor real em precis&ccedil;&atilde;o dupla numa cadeia de caracteres;
+</OL>
+<P>
+
+<H3>4 - Gera&ccedil;&atilde;o do compilador</H3>
+
+O processo de gera&ccedil;&atilde;o do compilador propriamente dito 
+exige as ferramentas <B>flex</B> (vers&atilde;o 2.5.35 ou mais actual),
+<B>byacc</B> (vers&atilde;o 1.9 ou mais actual),
+<B>pburg</B> (vers&atilde;o disponibilizada na p&aaucte;gina da disciplina).
+As ferramentas <B>flex</B> e <B>byacc</B> podem j&aacute; estar instaladas.
+Para gerar o compilador, executar no direct&oacute;rio <B>demo</B>
+o comando <B>make</B> ou os comandos
+(a ordem das instru&ccedil;&otilde;es &eacute; relevante):
+<OL>
+  <LI>gera&ccedil;&atilde;o do analisador sint&aacute;ctico (gera os ficheiros <TT>y.tab.c</TT>, <TT>y.tab.h</TT> e <TT>y.output</TT>):
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv gram.y</I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o do analisador lexical (gera o ficheiro <TT>lex.yy.c</TT>):
+  	<PRE>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o do gerador de c&oacute;digo <B>postfix</B> para processadores <B>Pentium</B> de 32 <I>bits</I> (gera o ficheiro <TT>yyselect.c</TT>):
+  	<PRE>
+  	<B>prompt$ </B><I> pburg -T pfix.brg</I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o dos ficheiros objecto relocat&aacute;veis:
+  	<PRE>
+  	<B>prompt$ </B><I> gcc -g -c -DYYDEBUG -I../lib y.tab.c lex.yy.c yyselect.c </I>
+  	</PRE>
+  <LI>gera&ccedil;&atilde;o do compilador (geração de código para i386):
+  	<PRE>
+  	<B>prompt$ </B><I> gcc -o compact y.tab.o lex.yy.o yyselect.o -L../lib -lutil -lfl</I>
+  	</PRE>
+</OL>
+<P>
+
+<H3>5 - Execução de aplicações escritas em <U>compact</U></H3>
+<P>
+Uma vez produzido o compilador, podemos us&aacute;-lo para produzir programas e
+rotinas.
+Entre os ficheiros de exemplo disponibilizados no direct&oacute;rio, temos:
+<UL>
+  <LI><B>div.cpt</B> imprime os divisores de um n&uacute;mero lido, ou imprime '<B>&Eacute; primo</B>' se for div&iacute;vel apenas pela unidade e por ele pr&oacute;prio.
+  <LI><B>gcd.cpt</B> determina e imprime o maior divisor comum entre dois n&uacute;meros introduzidos.
+  <LI><B>tri.cpt</B> classifica o tri&acirc;ngulo, dadas as dimens&otilde;es dos seus lados.
+</UL>
+
+Para gerar código <I>assembly</I> para <B>linux-elf-i386</B>,
+o primeiro passo consiste em compilar um ficheiro fonte para
+produzir o respectivo ficheiro <I>assembly</I>:<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> ./compact div.cpt</I>
+  	</PRE>
+  <P>
+  A produ&ccedil;&atilde;o do ficheiro objecto utiliza o <I>assembler</I> <B>nasm</B>:
+  	<PRE>
+  	<B>prompt$ </B><I> nasm -felf div.asm</I>
+  	</PRE>
+    ficando gerado o ficheiro <B>div.o</B>.
+  <P>
+  Para produzir o execut&aacute;vel final &eacute; necess&aacute;rio ligar o ficheiro objecto gerado com uma biblioteca. Tal deve-se ao facto de, na realidade,
+  a execu&ccedil;&atilde;o dos programas n&atilde;o come&ccedil;a pela rotina
+  <B>main</B>, mas pela rotina <B>_start</B>, devendo esta chamar a rotina
+  <B>main</B> depois de ter efectuado as inicia&ccedil;&otilde;es
+  necess&aacute;rias. De igual forma, a rotina <B>_start</B> &eacute;
+  respons&aacute;vel por terminar o processo, quando o programa regressa da
+  rotina <B>main</B>. Notar que o processador continuaria a executar instru&ccedil;&otilde;es, a menos que se passe o controlo ao sistema operativo com o
+  pedido de termina&ccedil;&atilde;o: a chamada ao sistema <B>_exit</B>
+  (semelhante ao <B>exit</B> do <B>C</B>).
+  <P>
+  As rotinas necess&aacute;rias e outras rotinas de uso comum, como rotinas de
+  leitura e impress&atilde;o, est&atilde;o inclu&iacute;das no ficheiro
+  <B>apart.asm</B> e no ficheiro <B>linux.asm</B>
+  da biblioteca <B>-lrun</B> (que correspode ao ficheiro
+      <TT>compact/runtime/librun.a</TT>).
+  <P>
+  O execut&aacute;vel final &eacute; obtido atrav&eacute;s da jun&ccedil;&atilde;o do ficheiro objecto com a biblioteca de suporte &agrave; execu&ccedil;&atilde;o:
+  	<PRE>
+  	<B>prompt$ </B><I> ld -o div div.o -L../runtime -lrun</I>
+  	</PRE>
+    O execut&aacute;vel <B>div</B> pode ser executado como qualquer outro
+    programa <B>unix</B>:
+  	<TT>
+  	<B>prompt$ </B><I> ./div</I> <BR>
+	<I>12</I> <B> <BR>
+	2 <BR>
+	3 <BR>
+	4 <BR>
+	6 <BR>
+  	</B></TT>
+
+<P>
+
+<H3>6 - As entranhas do compilador</H3>
+<P>
+    Tal como descrito nas aulas, o compilador &eacute; constitu&iacute;do por
+    um analisador lexical, um analisador sint&aacute;ctico e uma an&aacute;lise
+    sem&acirc;ntica, quase inexistente neste caso, dada a simplicidade da linguagem.
+    A gera&ccedil;&atilde;o de c&oacute;digo &eacute; efectuada directamente
+    a partir da &aacute;rvore sint&aacute;ctica atrav&eacute;s da
+    selec&ccedil;&atilde;o das instru&ccedil;&otilde;es disponibilizadas pelo
+    processador alvo.
+    <UL>
+      <LI><B>analisador lexical</B>: como &eacute; sabido o analisador lexical
+      l&ecirc; os caracteres de um ficheiro e agrupa-os em conjuntos,
+      designados lexemas: identificadores, literais (constantes), operadores,
+      terminadores, delimitadores, brancos e coment&aacute;rios, estes dois
+      &uacute;ltimos sem interesse para o resto do compilador.
+      O ficheiro <B>y.tab.h</B> define os lexemas (<I>tokens</I>), com mais
+      de um car&aacute;cter, que o analisador sint&aacute;ctico pede ao
+      analisador lexical.
+      A cada um destes lexemas corresponde uma express&atilde;o regular
+      no ficheiro <B>scan.l</B>, o analisador lexical.
+      Quando a sequ&ecirc;ncia de caracteres de entrada verifica uma
+      determinada express&atilde;o regular, o c&oacute;digo <B>C</B> que
+      lhe est&aacute; associado &eacute; executado. Este c&oacute;digo
+      devolve o n&uacute;mero do lexema encontrado e, caso seja
+      necess&aacute;rio, o seu valor na vari&aacute;vel <B>yylval</B>.
+      <LI><B>analisador sint&aacute;ctico</B>: constitu&iacute;do pelo
+      ficheiro <B>gram.y</B>, define quais os lexemas (com mais de
+      um car&aacute;cter) que necessita (<I>%token</I>), define a
+      prioridade dos operadores (<I>%left, %right e %nonassoc</I>)
+      e uma gram&aacute;tica LALR(1) depois do separador %%.
+      Quando a uma regra verifica a sequ&ecirc;ncia de lexemas de entrada,
+      &eacute; activada e o c&oacute;digo associado &eacute; executado.
+      Este c&oacute;digo pode continuar as verifica&ccedil;&otilde;es
+      sint&aacute;cticas que n&atilde;o foi poss&iacute;vel efectuar na
+      gram&aacute;tica e fazer verifica&ccedil;&otilde;es sem&acirc;nticas
+      (incluindo a tabela de s&iacute;mbolos),
+      produzindo uma estrutura de dados interm&aacute;dia (uma &aacute;rvore,
+      no exemplo em estudo) ou gerando directamente o c&oacute;digo
+      resultante, se for poss&iacute;vel fazer uma gera&ccedil;&atilde;o
+      dirigida pela sintaxe (linguagens simples).
+      Notar que as rotinas, para as declarações existentes em <B>node.h</B>,
+      e <B>tabid.h</B>, encontram-se na biblioteca <B>-lutil</B>
+      (que correspode ao ficheiro <TT>compact/lib/libutil.a</TT>).
+      <LI><B>gera&ccedil;&atilde;o de c&oacute;digo final</B>:
+      &eacute; efectuada, no ficheiro <B>pfix.brg</B>,
+      percorrendo a &aacute;vore em profundidade e seleccionando as 
+      instru&ccedil;&otilde;es do processador, dependendo
+      dos seus custos relativos.
+      Este ficheiro define a forma de acesso &agrave; &aacute;rvore
+      sint&aacute;ctica, os s&iacute;mbolos terminais da &aacute;rvore
+      sint&aacute;ctica e a gram&aacute; das instru&ccedil;&otilde;es e
+      respectivos custos.
+      No entanto, esta gram&aacute;tica descreve as instru&ccedil;&otilde;es
+      do processador alvo e n&atilde;o da linguagem de
+      programa&ccedil;&atilde;o.
+      A gera&ccedil;&atilde;o das instru&ccedil;&otilde;es utiliza as
+      sequ&ecirc;ncias definidas no ficheiro <b>postfix.h</b>, permitindo
+      abstrair alguns dos pormenores do processador alvo.
+      Para tal utiliza as rotinas e estruturas declaradas 
+      nos ficheiros <B>node.h</B> (árvore sintáctica) e <B>tabid.h</B>
+      (tabela de símbolos).
+</UL>
+<P>
+
+<H3>7 - Compiladores alternativos para a linguagem <U>compact</U></H3>
+<P>
+
+Substituindo um ou mais ficheiros do compilador anterior pode-se produzir:
+<OL>
+  <LI>Gera&ccedil;&atilde;o de c&oacute;digo <B>ARM</B>.<BR>
+	A gera&ccedil;&atilde;o de c&oacute; para o processador <B>ARM</B>
+	&eacute; id&ecirc;ntica ao compilador original para <B>Pentium</B>,
+	onde o seleccionador de instru&ccedil;&otilde;es <TT>pfix.brg</TT>
+	&eacute; subtitu&iacute;do por <TT>arm.brg</TT>:
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv gram.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> pburg -T arm.brg</I>
+  	<B>prompt$ </B><I> gcc -o pfarm -DpfARM -DYYDEBUG -I../lib y.tab.c lex.yy.c yyselect.c -L../lib -lutil -lfl</I>
+  	</PRE>
+        Notar que a altera&ccedil;&atilde;o reside em indicar a op&ccedil;&atilde;o
+        de compila&ccedil;&atilde;o <b>-DpfARM</b>, que substitui as sequ&ecirc;ncias
+        de instru&ccedil;&otilde;es necess&aacute;rias. Existem op&ccedil;&otilde;es
+        para gerar c&oacute;digo <b>i386</b> em formato <b>AT&T</b>
+        (<b>-DpfI386GAS</b>, usando <tt>as</tt> em vez de <tt>nasm</tt>)
+        ou 64-bits (<b>-DpfAMD64</b>, usando <tt>runtime/linux64/librun.a</tt>
+        e <tt>nasm -felf64</tt> em vez de <tt>nasm -felf</tt>).
+        <p>
+	A execu&ccedil;&atilde;o dos exemplos necessita de um processador <B>ARM</B> (um sistema <b>android</b>, por exemplo):
+  	<PRE>
+  	<B>prompt$ </B><I> ./pfarm div.cpt</I>
+  	<B>prompt$ </B><I> as div.asm</I>
+  	<B>prompt$ </B><I> ld -o div div.o ../runtime/arm/librun.a</I>
+  	<B>prompt$ </B><I> ./div</I>
+  	</PRE>
+        ou de um emulador como, por exemplo o <B>gnuarm</B>:<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> ./pfarm div.cpt</I>
+  	<B>prompt$ </B><I> arm-elf-as div.asm</I>
+  	<B>prompt$ </B><I> arm-elf-ld -o div div.o ../runtime/arm/librun.a</I>
+  	<B>prompt$ </B><I> arm-none-linux-gnueabi div</I>
+  	</PRE>
+  <LI>Compilador dirigido pela sintaxe.<BR>
+	Como a linguagem <U>compact</U> &eacute; muito simples, &eacute;
+	poss&iacute;vel gerar o c&oacute;digo durante a an&aacute;lise
+	sint&aacute;tica. Para tal o ficheiro <TT>syntax.y</TT> &eacute;
+	utilizado, em vez do <TT>gram.y</TT>, com<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv syntax.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o syntax -DYYDEBUG -I../lib y.tab.c lex.yy.c -L../lib -lutil -lfl</I>
+  	</PRE>
+  <LI>Interpretador.<BR>
+	Em vez de compilar cada programa em <U>compact</U> para um
+	execut&aacute;vel para posterior execu&ccedil;&atilde;o, um
+	interpretador executa o imediatamente o programa.
+	Para construir o interpretador, o analisador sint&aacute;tico
+	&eacute; substitu&iacute;do pelo ficheiro <TT>tree.y</TT> que
+	produz uma &aacute;rvore sint&aacute;tica gen&eacute;rica.
+	A interpreta&ccedil;&atilde;o da &aacute;rvore &eacute; efectuada
+	pelo ficheiro <TT>interp.c</TT>.
+	O compilador &eacute; gerado com<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv tree.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o interp -DYYDEBUG -I../lib y.tab.c lex.yy.c interp.c -L../lib -lutil -lfl</I>
+  	</PRE>
+	Para interpretar um programa escrito em <B>compact</B> basta passar
+	como argumento o ficheiro (com a extensão <B>cpt</B>) a ser
+	executado:<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> ./interp div.cpt</I>
+  	</PRE>
+  <LI>Gera&ccedil;&atilde;o de c&oacute;digo <B>C</B>.<BR>
+	Em vez de compilar para c&oacute;digo m&aacute;quina
+	(<B>Pentium</B> ou outro), o compilador pode gerar uma
+	outra linguagem de alto n&iacute;vel que seja, pelo menos,
+	t&atilde;o poderosa como a linguagem a processar.
+	Assim, para gerar <B>C</B> a partir de <U>compact</U> basta
+	produzir c&oacute;digo <B>C</B> a partir da &aacute;rvore
+	sint&aacute;tica gen&eacute;rica, como no caso do interpretador,
+	com<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv tree.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o trans -DYYDEBUG -I../lib y.tab.c lex.yy.c trans.c -L../lib -lutil -lfl</I>
+  	</PRE>
+	Para traduzir um programa escrito em <B>compact</B> para a linguagem
+	<B>C</B> e gerar um executável pelo compilador de <B>C</B>:<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> ./trans div.cpt</I>
+  	<B>prompt$ </B><I> cc -o div div.c</I>
+  	<B>prompt$ </B><I> ./div</I>
+  	</PRE>
+  <LI>Gera&ccedil;&atilde;o de c&oacute;digo <B>Pentium</B> com reserva de registos <B>greedy</B>.<BR>
+        Em vez de usar as sequ&ecirc;ncias definidas no ficheiro <b>postfix.h</b>,
+        pode-se gerar directamente as  instru&ccedil;&otilde;es do processador.
+        Para tal, acede-se directamente aos registos do processador, sendo
+        necess&aacute;rio efectuar a reserva dos registos a utilizar.
+        Neste exemplo, utiliza-se o algoritmo mais simples, e menos eficiente,
+        onde os registos s&atilde;o reservados sempre que pedidos e libertados
+        de seguida (reserva <b>greedy</b>).
+        Para mais, n&atilde;o se efectua <b>spilling</b>, isto &eacute;,
+        quando os registos s&atilde;o insuficientes  &eacute; gerado um erro,
+        em vez de procurar libertar um registo que n&atilde;o seja imediatamente
+        necess&aacute;rio, voltando a recarregar mais tarde o valor libertado
+        (temporariamente salvaguardado na mem&oacute;ria, em geral na pilha).
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv gram.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> pburg -T i386.brg</I>
+  	<B>prompt$ </B><I> gcc -o compact -DYYDEBUG -I../lib y.tab.c lex.yy.c yyselect.c -L../lib -lutil -lfl</I>
+  	</PRE>
+        Existe tamb&eacute;m uma vers&atilde;o para <b>arm</b> designada por
+        <b>android.brg</b>, pelo que basta substituir <b>i386.brg</b> por 
+        <b>android.brg</b> no exemplo acima.
+  <LI>Gera&ccedil;&atilde;o de c&oacute;digo <B>Pentium</B> sem optimiza&ccedil;&atilde;o.<BR>
+	Caso n&atilde;o se utilize o seleccionador de instru&ccedil;&otilde;es
+	<B>pburg</B> (ou equivalente), pode-se assumir que o processador
+	n&atilde;o possui registos permanentes e guardar os valores nas pilha.
+	O processo fica simplificado pois existe uma s&oacute;
+	instru&ccedil;&atilde;o para cada opera&ccedil;&atilde;o da
+	&aacute;rvore sint&aacute;tica gen&eacute;rica.
+	Os ficheiros <TT>postfix.h</TT> e <TT>postfix.c</TT> cont&ecirc;m
+	as instru&ccedil;&otilde;es <B>Pentium</B> de pilha (n&atilde;o
+	tirando partido de nenhum dos registos) e o gerador que percorre
+	a &aacute;rvore.
+	Assim, para gerar c&oacute;digo <B>Pentium</B> de pilha
+	a partir da &aacute;rvore sint&aacute;tica gen&eacute;rica,
+	como no caso do interpretador, basta substituir o ficheiro
+	<TT>interp.c</TT> pelo ficheiro <TT>postfix.c</TT>, com<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv tree.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o postfix -DYYDEBUG -I../lib y.tab.c lex.yy.c postfix.c -L../lib -lutil -lfl</I>
+  	</PRE>
+  <LI>Gera&ccedil;&atilde;o de c&oacute;digo de <I>debug</I> com <B>postfix</B> para <B>Pentium</B> .<BR>
+  	O ficheiro <TT>stab.c</TT> gera c&oacute;digo de <I>debug</I> para
+	permitir que o <B>gdb</B> possa executar os exemplos escritos na
+	linguagem <B>compact</B>. Assim, pode-se visualizar, linha a linha,
+	a execu&ccedil;&atilde;o do exemplo e inspeccionar ou alterar os
+	valores das vari&aacute;veis, tal como num programa em <B>C</B>.
+	A rotina <TT>stab()</TT> define os tipos de dados (por exemplo,
+	<TT>inteiro</TT> em vez de <TT>int</TT>), o ficheiro com o
+	c&oacute;digo fonte e os n&uacute;meros de linha das
+	instru&ccedil;&atilde;es geradas.
+	O c&oacute;digo gerado deve ser montado (<I>assembled</I>) pelo
+	<B>as</B> (n&atilde;o pelo <B>nasm</B>, pois este n&atilde;o sabe
+	processar o formato de <I>debug</I> do <B>gdb</B>).
+  <LI>Gera&ccedil;&atilde;o de <I>bytecodes</I> <B>Java</B>.<BR>
+	A m&aacute;quina virtual <B>Java</B> j&aacute; &eacute; um processador
+	de pilha, pelo que o processo de gera&ccedil;&atilde;o &eacute;
+	semelhante &agrave; gera&ccedil;&atilde;o <TT>postfix</TT><BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv tree.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o javacpt -DYYDEBUG -I../lib y.tab.c lex.yy.c javacpt.c -L../lib -lutil -lfl</I>
+  	</PRE>
+	Os ficheiros gerados pelo compilador (<B>.j</B>) devem ser
+	compilados em <B>.class</B> pela ferramenta <B>jasmin</B>
+	antes de serem executados, pois o compilador apenas gera
+	<I>bytecodes</I> <B>java</B>:
+  	<PRE>
+  	<B>prompt$ </B><I> ./javacpt div.cpt</I>
+  	<B>prompt$ </B><I> jasmin div.j</I>
+  	<B>prompt$ </B><I> java div</I>
+  	</PRE>
+  <LI>Gera&ccedil;&atilde;o de <I>bytecodes</I> <B>.net</B>.<BR>
+	Tal como a m&aacute;quina virtual <B>Java</B>, o ambiente
+	<B>.net</B> utiliza uma linguagem <B>assembly</B>, designada
+	por <B>MSIL</B>, sendo o compilador gerado com<BR>
+  	<PRE>
+  	<B>prompt$ </B><I> byacc -dv tree.y</I>
+  	<B>prompt$ </B><I> flex -l scan.l</I>
+  	<B>prompt$ </B><I> gcc -o msilcpt -DYYDEBUG -I../lib y.tab.c lex.yy.c msilcpt.c -L../lib -lutil -lfl</I>
+  	</PRE>
+	Os ficheiros gerados pelo compilador (<B>.il</B>) devem ser
+	compilados antes de serem executados, pois o
+	compilador gera <B>assembly</B>:
+  	<PRE>
+  	<B>prompt$ </B><I> ./msilcpt div.cpt</I>
+  	<B>prompt$ </B><I> ilasm div.il</I>
+  	<B>prompt$ </B><I> ./div</I>
+  	</PRE>
+
+</OL>
+<BR><HR>
+<ADDRESS>
+Pedro Reis Santos
+2013-02-01
+</ADDRESS>
+</BODY>
+</HTML>

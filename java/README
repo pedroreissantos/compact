@@ -1,0 +1,20 @@
+
+  The Compact in Java
+
+  The javaTree directory uses a simple Tree.java class, similar to the C's
+  Node.c union, but instead all possible branches are present, although
+  some elements may not be in use.
+  Selection is performed by i386j.brg pburg file.
+
+  The javaNode directory uses a Node.java class and it's subclasses to
+  provide an Object-Oriented replacement for the C's union.
+  Selection is performed by i386j.brg pburg file.
+
+  The javaVisitor directory uses a Node.java class and it's subclasses to
+  Simple hierarchy of Node types to replace C's union.
+  The code generation is performed by Visitor pattern transversing which
+  requires additional node types since a different NodeXXX.java class for
+  each distinct generation pattern.
+  Since no selection is performed each Visitor's accept rotine can only
+  generate its own code without interaction with other adjacent node,
+  therefore no selection optimization can be performed.

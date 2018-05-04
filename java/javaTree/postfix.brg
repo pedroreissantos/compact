@@ -1,0 +1,110 @@
+%{
+import java.io.*;
+%}
+%include "Parser.java"
+%%
+stat:	PROGRAM(stat,stat)
+stat:	END
+
+stat:	IF(cond,stat)	{ pf.LABEL(mklbl(p.left().place())); }
+cond:	reg	      1 { p.place(++lbl); pf.JZ(mklbl(lbl)); }
+
+stat:	ELSE(then, stat) { pf.LABEL(mklbl(p.left().place())); }
+then:	IF(cond, stat) 1 { p.place(++lbl); pf.JMP(mklbl(lbl));
+			   pf.LABEL(mklbl(p.left().place())); }
+
+stat:	WHILE(body, reg) 1 { pf.JNZ(mklbl(p.left().left().place()+1)); }
+body:	DO(begin, stat)	   { pf.LABEL(mklbl(p.left().place())); }
+begin:	START		 1 { p.place(++lbl); pf.JMP(mklbl(lbl));
+			    pf.LABEL(mklbl(++lbl)); }
+
+stat:	STRING	9 { String l = mklbl(++lbl);
+		    pf.RODATA(); pf.ALIGN(); pf.LABEL(l); pf.STR(p.text());
+		    pf.TEXT(); pf.ADDR(l); pf.CALL("_prints"); pf.TRASH(4);
+		    pf.CALL("_println"); }
+stat:	PRINT(reg) 3 { pf.CALL("_printi"); pf.TRASH(4); pf.CALL("_println"); }
+stat:	READ	   1 { pf.CALL("_readi"); pf.PUSH(); pf.ADDRA(p.left().text()); }
+
+stat:	ASSIGN(VARIABLE,reg) 1 { pf.ADDRA(p.left().text()); }
+stat:	reg 1 { pf.TRASH(4); }
+
+reg:	VARIABLE 1 { pf.ADDRV(p.text()); }
+reg:	INTEGER 1 { pf.INT(p.value()); }
+reg:	ADD(reg,reg)	1 { pf.ADD(); }
+reg:	SUB(reg,reg)	1 { pf.SUB(); }
+reg:	UMINUS(reg)	1 { pf.NEG(); } 
+reg:	MUL(reg,reg)	1 { pf.MUL(); }
+reg:	DIV(reg,reg)	1 { pf.DIV(); }
+reg:	MOD(reg,reg)	1 { pf.MOD(); }
+reg:	EQ(reg,reg)	1 { pf.EQ(); }
+reg:	NE(reg,reg)	1 { pf.NE(); }
+reg:	LT(reg,reg)	1 { pf.LT(); }
+reg:	LE(reg,reg)	1 { pf.LE(); }
+reg:	GE(reg,reg)	1 { pf.GE(); }
+reg:	GT(reg,reg)	1 { pf.GT(); }
+%%
+private int lbl;
+private String mklbl(int n) { return "_L"+n; }
+
+  public boolean evaluate() {
+    if (parser.yyparse() > 0) return false;
+    pf.TEXT();
+    pf.ALIGN();
+    pf.GLOBL("_main");
+    pf.LABEL("_main");
+    pf.START();
+    // System.out.println(parser.syntax());
+    if (!select(parser.syntax()))
+      System.err.println("No match for start symbol");;
+    pf.INT(0);
+    pf.POP();
+    pf.LEAVE();
+    pf.RET();
+    // declare used variables
+    pf.DATA();
+    pf.ALIGN();
+    for (String s: parser.symbols().keys()) {
+      pf.LABEL(s);
+      pf.CONST(0);
+    }
+    // import library functions
+    pf.EXTRN("_readi");
+    pf.EXTRN("_printi");
+    pf.EXTRN("_prints");
+    pf.EXTRN("_println");
+    return true;
+  }
+
+  private Parser parser;
+  private Postfix pf;
+  public static String extension(String filename, String ext) {
+	  int pos = filename.lastIndexOf('.');
+	  if (pos == -1) return filename + "." + ext;
+	  else return filename.substring(0, pos) + ext;
+  }
+  Selector(String in, String out) throws IOException {
+	  parser = new Parser(new FileReader(in));
+	  pf = new PFi386(out);
+  }
+  Selector(String in) throws IOException {
+	  parser = new Parser(new FileReader(in));
+	  pf = new PFi386(extension(in, ".asm"));
+  }
+  Selector() {
+	  parser = new Parser(new InputStreamReader(System.in));
+	  pf = new PFi386("out.asm");
+  }
+
+  public static void main(String args[]) throws IOException {
+    Selector s;
+
+    if (args.length > 0)
+      if (args.length > 1)
+        s = new Selector(args[0], args[1]);
+      else
+        s = new Selector(args[0]);
+    else
+      s = new Selector();
+
+    s.evaluate();
+  }

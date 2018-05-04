@@ -1,0 +1,118 @@
+# nmake -f Makefile.win
+.SUFFIXES: .cpt .brg
+
+ID=compact
+VER=1g
+
+BID=$(ID)-$(VER)
+COPY="$(BID) (C)prs, 2012"
+
+## windows
+LIBDIR=d:\bin\vc98\Lib
+EXT=.obj
+NASM=nasm -fwin32
+CLIB=..\lib\util.lib
+RTL=..\runtime\run.lib
+BIN=$(ID).exe
+LDFLAGS= /Zi /MLd
+CC=cl /nologo
+CFLAGS=/DWIN32 /Zi /MLd /DYYDEBUG /I..\lib
+AR=lib /nologo /out:$@
+AS=$(NASM)
+COMPILE=$(CC) $(CFLAGS) /c
+
+LEX=flex
+LFLAGS=-l
+YACC=byacc
+YFLAGS=-dv
+BURG=pburg
+BFLAGS=-I -R
+LOADLIBS=$(CLIB) /link /LIBPATH:$(LIBDIR)# -lfl
+LK=$(CC) $(CFLAGS) $(LDFLAGS)
+
+all: $(CLIB) $(BIN) $(RTL)
+
+.brg.c:
+	$(BURG) $(BFLAGS) -p $* $< $@
+
+.asm.exe:
+	$(NASM) $*.asm -o $*$(EXT)
+	$(LD) $*.obj $(LIB)
+
+.cpt.asm:
+	./$(ID) $<
+
+.asm$(EXT):
+	$(NASM) $< -o $@
+
+full: all trans.exe gram.exe interp.exe tmpl.exe
+
+$(BIN): gram$(EXT) scan$(EXT) i386$(EXT) ver$(EXT)
+	$(LK) -o $@ gram$(EXT) scan$(EXT) i386$(EXT) $(LOADLIBS)
+
+full: all cptarm cptpepe postfix trans gram greedy interp stab jasmin msil pfix
+
+pfix: scan$(EXT) gram$(EXT) pfix$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) gram$(EXT) pfix$(EXT) $(LOADLIBS)
+
+cptarm: scan$(EXT) gram$(EXT) arm$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) gram$(EXT) arm$(EXT) $(LOADLIBS)
+
+cptpepe: scan$(EXT) gram$(EXT) pepe$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) gram$(EXT) pepe$(EXT) $(LOADLIBS)
+
+postfix: scan$(EXT) tree$(EXT) postfix$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) postfix$(EXT) $(LOADLIBS)
+
+trans: scan$(EXT) tree$(EXT) trans$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) trans$(EXT) $(LOADLIBS)
+
+gram: scan$(EXT) syntax$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) syntax$(EXT) $(LOADLIBS)
+
+greedy: scan$(EXT) tree$(EXT) greedy$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) greedy$(EXT) $(LOADLIBS)
+
+interp: scan$(EXT) tree$(EXT) interp$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) interp$(EXT) $(LOADLIBS)
+
+stab: scan$(EXT) tree$(EXT) stab$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) stab$(EXT) $(LOADLIBS)
+
+jasmin: scan$(EXT) tree$(EXT) jasmin$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) jasmin$(EXT) $(LOADLIBS)
+
+msil: scan$(EXT) tree$(EXT) msil$(EXT) $(UTIL)
+	$(LINK.c) -o $@ scan$(EXT) tree$(EXT) msil$(EXT) $(LOADLIBS)
+
+scan$(EXT): gram.c
+
+.y.c:
+	$(YACC) $(YFLAGS) $<
+	MV y.tab.c $@
+
+.l.c:
+	$(LEX) $(LFLAGS) -t $< > $@
+
+node$(EXT): ..\lib\node.c
+	$(COMPILE) $?
+tabid$(EXT): ..\lib\tabid.c
+	$(COMPILE) $?
+main$(EXT): ..\lib\main.c
+	$(COMPILE) $?
+COBJ=node$(EXT) tabid$(EXT) main$(EXT)
+$(CLIB): $(COBJ)
+	$(AR) $(COBJ)
+
+..\runtime\lib$(EXT): ..\runtime\lib.asm
+	$(AS) $?
+..\runtime\win$(EXT): ..\runtime\win.asm
+	$(AS) $?
+LOBJ=..\runtime\lib$(EXT) ..\runtime\win$(EXT)
+$(RTL): $(LOBJ)
+	$(AR) $(LOBJ)
+
+clean:
+	del /F /Q *.obj *.exe y.tab.* lex.yy.* y.output *.asm $(CLIB) $(RTL) ..\runtime\*.obj
+
+.PHONY: all clean

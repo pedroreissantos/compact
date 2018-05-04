@@ -1,0 +1,65 @@
+program	# classificador de triÃ¢ngulos
+
+  a = 0;		# criar as variáveis
+  b = 0;
+  c = 0;
+
+  print 'introduza as dimensões do primeiro lado do triÃ¢ngulo: ';
+  read a;		# introduzir as dimensões da 3 faces do triÃ¢ngulo
+  print 'introduza as dimensões do segundo lado do triÃ¢ngulo: ';
+  read b;
+  print 'introduza as dimensões do terceiro lado do triÃ¢ngulo: ';
+  read c;
+
+  if (a < 1) {		# face de comprimento não positivo
+    print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
+  }
+  else {
+    if (b < 1) {
+      print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
+    }
+    else {
+      if (c < 1) {
+	print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
+      }
+      else {
+	if (a + b <= c) {
+	  print 'Não e um triÃ¢ngulo';
+	}
+	else {
+	  if (a + c <= b) {
+	    print 'Não e um triÃ¢ngulo';
+	  }
+	  else {
+	    if (c + b <= a) {
+	      print 'Não e um triÃ¢ngulo';
+	    }
+	    else {
+	      if (a == b) {
+		if (b == c) {
+		  print 'triÃ¢ngulo equilátero';
+		}
+		else {
+		  print 'triÃ¢ngulo isósceles';
+		}
+	      }
+	      else {
+		if (b == c) {
+		  print 'triÃ¢ngulo isósceles';
+		}
+		else {
+		  if (a == c) {
+		    print 'triÃ¢ngulo isósceles';
+		  }
+		  else {
+		    print 'triÃ¢ngulo escaleno';
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+end

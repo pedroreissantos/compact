@@ -1,0 +1,21 @@
+.SUFFIXES: .obj .lib
+LIB=util
+CFLAGS=/Yd
+BID=$(ID)-$(VER)
+
+all: $(LIB).lib
+
+$(LIB).lib: node.obj tabid.obj main.obj
+	LIB /out:$@ $?
+
+.c.obj:
+	$(CC) $(CFLAGS) -c $<
+
+depend:
+	makedepend -Y node.c tabid.c
+
+backup: clean
+	PWD=`pwd`; CWD=`basename $$PWD`; cd ..; tar cf - $$CWD | gzip -9 > $@/$(BID).tgz
+
+clean:
+	del /F /Q $(LIB).lib *.obj *.exe

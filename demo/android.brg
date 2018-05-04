@@ -1,0 +1,174 @@
+%{
+/* reserva de registos greedy sem spilling.
+ * call não faz save do 'r0' porque são sempre instruções e não expressões.
+ *
+ * some rules do not exist due to hardware limitations:
+ * - there are no 'mem' references since it is a load-store machine
+ * - stat:ASSIGN(VARIABLE,INTEGER) is done through a register, using other rules
+ */
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include "node.h"
+#include "tabid.h"
+
+static const char *name[] = { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7"
+#ifndef THUMB
+ , "r8", "r9", "r10", "r11", "r12"
+#endif
+};
+#define NREG (sizeof(name)/sizeof(name[0]))
+static char busy[NREG];
+static int getReg();
+
+extern FILE *outfp;
+
+extern int lbl;
+static char *mklbl(int n) {
+  static char buf[20];
+  sprintf(buf, "_i%d", n);
+  return strcpy(malloc(strlen(buf)+1),buf);
+}
+
+static void jcond(Node *p, char *cond) {
+  fprintf(outfp, " cmp %s, %s\n %s %s\n",
+	  name[PLACE(p->SUB(0)->SUB(0))],
+	  name[PLACE(p->SUB(0)->SUB(1))],
+	  cond, p->SUB(1)->value.s);
+  busy[PLACE(p->SUB(0)->SUB(0))] = 0;
+  busy[PLACE(p->SUB(0)->SUB(1))] = 0;
+}
+
+static void idiv(int op, Node *p) {
+  /* arm does not divide, so we call a rotine */
+  int a = 0, b = 1;
+  if (PLACE(LEFT_CHILD(p)) == b && PLACE(RIGHT_CHILD(p)) == a) {
+    /* swap arguments */
+    fprintf(outfp, " push {r0}\n mov r0, r1\n pop{r1}\n");
+  } else {
+    if (PLACE(LEFT_CHILD(p)) != a) {
+      a = PLACE(LEFT_CHILD(p));
+      fprintf(outfp, " push {r0}\n mov r0, %s\n", name[a]);
+    }
+    if (PLACE(RIGHT_CHILD(p)) != b) {
+      b = PLACE(RIGHT_CHILD(p));
+      if (a == 1) b = 1; /* do not save the first argument */
+      else fprintf(outfp, " push {r1}\n");
+      fprintf(outfp, " mov r1, %s\n", name[PLACE(RIGHT_CHILD(p))]);
+    }
+  }
+  PLACE(p) = PLACE(LEFT_CHILD(p));
+  busy[PLACE(RIGHT_CHILD(p))] = 0;
+  fprintf(outfp, " bl %s\n", op ? "_mod" : "_div");
+  if (a != 0)
+    fprintf(outfp, " mov %s, r0\n pop {r0}\n", name[PLACE(p)]);
+  if (b != 1) fprintf(outfp, " pop {r1}\n");
+}
+
+static void binop(char *op, Node *p) {
+  PLACE(p)=PLACE(LEFT_CHILD(p));
+  fprintf(outfp, " %s %s, %s, %s\n", op, name[PLACE(p)], name[PLACE(LEFT_CHILD(p))],
+			  name[PLACE(RIGHT_CHILD(p))]);
+  busy[PLACE(RIGHT_CHILD(p))]=0;
+}
+
+static void cmpop(char *op, char *inv, Node *p) {
+  PLACE(p)=PLACE(LEFT_CHILD(p));
+  fprintf(outfp, " cmp %s, %s\n mov%s %s, #1\n mov%s %s, #0\n",
+      name[PLACE(LEFT_CHILD(p))], name[PLACE(RIGHT_CHILD(p))],
+      op, name[PLACE(p)], inv, name[PLACE(p)]);
+  busy[PLACE(RIGHT_CHILD(p))]=0;
+}
+
+%}
+%term LIST=';' ASSIGN='=' ADD='+' SUB='-' MUL='*' DIV='/' MOD='%' LT='<' GT='>'
+%include "y.tab.h"
+%%
+stat:  LIST(stat,stat)
+stat:  STRING 2 { char *l = mklbl(++lbl); fprintf(outfp, ".section .rodata\n.align 2\n%s: .asciz \"%s\"\n.section .text\n ldr r0, =%s\n bl _prints\n bl _println\n", l, p->value.s, l); }
+stat:  PRINT(reg) 3 { fprintf(outfp, " mov r0, %s\n bl _printi\n bl _println\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))]); busy[PLACE(LEFT_CHILD(p))]=0; }
+stat:  READ 3 { fprintf(outfp, " bl _readi\n ldr r1, =%s\n str r0, [r1]\n", p->value.s); }
+stat:  JZ(reg,ETIQ) 2 {
+		fprintf(outfp, " cmp %s, #0\n beq %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
+			p->SUB(1)->value.s);
+                busy[PLACE(LEFT_CHILD(p))]=0; }
+stat:  JNZ(reg,ETIQ) 2 {
+		fprintf(outfp, " cmp %s, #0\n bne %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
+			p->SUB(1)->value.s);
+                busy[PLACE(LEFT_CHILD(p))]=0; }
+stat:  JMP 1 { fprintf(outfp, " b %s\n", p->value.s); }
+stat:  LABEL { fprintf(outfp, "%s:\n", p->value.s); }
+stat:  ASSIGN(VARIABLE,reg)   19 { int r = getReg();
+		IDnew(0, LEFT_CHILD(p)->value.s, IDtest);
+                fprintf(outfp, " ldr %s, =%s\n str %s, [%s]\n",
+                        name[r], LEFT_CHILD(p)->value.s,
+                        name[PLACE(RIGHT_CHILD(p))], name[r]);
+                busy[r] = 0;
+                busy[PLACE(RIGHT_CHILD(p))]=0; }
+stat:   JZ(LT(reg,reg), ETIQ)    2 { jcond(p, "bge"); }
+stat:   JZ(LE(reg,reg), ETIQ)    2 { jcond(p, "bgt"); }
+stat:   JZ(GT(reg,reg), ETIQ)    2 { jcond(p, "ble"); }
+stat:   JZ(GE(reg,reg), ETIQ)    2 { jcond(p, "blt"); }
+stat:   JZ(EQ(reg,reg), ETIQ)    2 { jcond(p, "bne"); }
+stat:   JZ(NE(reg,reg), ETIQ)    2 { jcond(p, "beq"); }
+stat:   JNZ(LT(reg,reg), ETIQ)    2 { jcond(p, "blt"); }
+stat:   JNZ(LE(reg,reg), ETIQ)    2 { jcond(p, "ble"); }
+stat:   JNZ(GT(reg,reg), ETIQ)    2 { jcond(p, "bgt"); }
+stat:   JNZ(GE(reg,reg), ETIQ)    2 { jcond(p, "bge"); }
+stat:   JNZ(EQ(reg,reg), ETIQ)    2 { jcond(p, "beq"); }
+stat:   JNZ(NE(reg,reg), ETIQ)    2 { jcond(p, "bne"); }
+
+stat:  reg { busy[PLACE(p)] = 0; /* free reg */ }
+reg:   VARIABLE 2 { fprintf(outfp, " ldr %s, =%s\n ldr %s, [%s]\n", name[PLACE(p) = getReg()], p->value.s, name[PLACE(p)], name[PLACE(p)]); }
+reg:   INTEGER 2 { fprintf(outfp, " ldr %s, =%d\n", name[PLACE(p) = getReg()], p->value.i); }
+reg:   ADD(reg,reg)     1 { binop("add", p); }
+reg:   SUB(reg,reg)    1 { binop("sub", p); }
+reg:   UMINUS(reg)       1 { PLACE(p)=PLACE(LEFT_CHILD(p));
+                fprintf(outfp, " rsb %s, %s, #0\n", name[PLACE(p)], name[PLACE(LEFT_CHILD(p))]); }
+
+reg:   MUL(reg,reg)   3 { binop("mul", p); }
+reg:   DIV(reg,reg)   3 { idiv(0, p); }
+reg:   MOD(reg,reg)   3 { idiv(1, p); }
+reg:   EQ(reg,reg)    3 { cmpop("eq", "ne", p); }
+reg:   NE(reg,reg)    3 { cmpop("ne", "eq", p); }
+reg:   LT(reg,reg)    3 { cmpop("lt", "ge", p); }
+reg:   LE(reg,reg)    3 { cmpop("le", "gt", p); }
+reg:   GE(reg,reg)    3 { cmpop("ge", "lt", p); }
+reg:   GT(reg,reg)    3 { cmpop("gt", "le", p); }
+%%
+static int getReg()
+{
+  int i;
+
+  for(i = 0; i < NREG; i++)
+    if (busy[i] == 0) {
+      busy[i] = 1;
+      return i;
+    }
+  fprintf(stderr, "Registos esgotados\n");
+  return sizeof(busy) + 1;
+}
+
+#include "y.tab.h"
+
+extern char **yynames;
+
+static int data(int t, char *s, int a, int user) {
+  if (s) fprintf(outfp, " %s: .word 0\n", s);
+  return 1;
+}
+
+void evaluate(Node *p) {
+  int i;
+  extern int trace, errors;
+
+  if (errors) return;
+  if (trace) printNode(p, stdout, yynames);
+  fprintf(outfp, ".section .text\n.align 2\n.global _main\n.type _main, %%function\n_main:\n stmfd sp!, {lr}\n");
+  if (yyselect(p) == 1)
+      yyerror("No match for instruction selection");
+  fprintf(outfp, " mov r0, #0\n ldmfd sp!, {pc}\n");
+  fprintf(outfp, ".section .data\n");
+  IDevery(data, 0);
+  fprintf(outfp, ".extern _prints\n.extern _printi\n.extern _println\n.extern _readi\n");
+}
