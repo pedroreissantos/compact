@@ -25,6 +25,7 @@ struct typeNode {
     int   line;			/* input file parse line */
     void *state;		/* for the instruction selector (burg) */ 
     int   info;			/* specific info such as type or register used */
+    void (*listen)(Node*);	/* listener */
     long  place;		/* location information */
     union {
       regint i;			/* value of literal integer */ 
@@ -35,7 +36,7 @@ struct typeNode {
 	void *data;		/* pointer to data */ 
       } d;			/* value of any opaque data (untyped) */
       struct {
-	int num;		/* number of subnodes in this node */
+	unsigned num;		/* number of subnodes in this node */
 	Node *n[1];  		/* subnodes (expandable) */ 
       } sub;
     } value;
@@ -47,9 +48,9 @@ Node *binNode(int attrib, Node *n1, Node *n2);
 Node *triNode(int attrib, Node *n1, Node *n2, Node *n3);
 Node *quadNode(int attrib, Node *n1, Node *n2, Node *n3, Node *n4);
 Node *pentNode(int attrib, Node *n1, Node *n2, Node *n3, Node *n4, Node *n5);
-Node *subNode(int attrib, int nops, ...);
-Node *seqNode(int oper, int nops, ...);
-Node *revNode(int oper, int nops, ...);
+Node *subNode(int attrib, unsigned nops, ...);
+Node *seqNode(int oper, unsigned nops, ...);
+Node *revNode(int oper, unsigned nops, ...);
 Node *nilNode(int attrib);
 Node *intNode(int attrib, regint i);
 Node *realNode(int attrib, double d);
@@ -62,11 +63,18 @@ Node *compareNode(Node *p, Node *n, int full);
 Node *copyNode(Node *p);
 void freeNode(Node *p);
 void printNode(Node *p, FILE *fp, char *tab[]);
-Node *newNode(NodeType t, int attrib, int nops);
+Node *newNode(NodeType t, int attrib, unsigned nops);
+void visitNode(Node *p, int mode, void (*func[])(Node*));
+void listenNode(Node *p, int mode);
+void listenerNode(Node *p, void (*func)(Node*));
+void pathNode(Node *p, FILE *fp, char *tab[], char *base);
 
 extern int debugNode;
 
-#define SUB(x)	value.sub.n[x]
+#define CHILD(x)	value.sub.n[x]
+
+#define POS 0
+#define PRE 1
 
 /* defines for pburg */
 #define STATE_TYPE void*

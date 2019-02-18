@@ -1,58 +1,58 @@
-program	# classificador de triângulos
+program	# classificador de triÃ¢ngulos
 
-  a = 0;		# criar as vari�veis
+  a = 0;		# criar as variáveis
   b = 0;
   c = 0;
 
-  print 'introduza as dimens�es do primeiro lado do triângulo: ';
-  read a;		# introduzir as dimens�es da 3 faces do triângulo
-  print 'introduza as dimens�es do segundo lado do triângulo: ';
+  print 'introduza as dimensões do primeiro lado do triÃ¢ngulo: ';
+  read a;		# introduzir as dimensões da 3 faces do triÃ¢ngulo
+  print 'introduza as dimensões do segundo lado do triÃ¢ngulo: ';
   read b;
-  print 'introduza as dimens�es do terceiro lado do triângulo: ';
+  print 'introduza as dimensões do terceiro lado do triÃ¢ngulo: ';
   read c;
 
-  if (a < 1) {		# face de comprimento n�o positivo
-    print 'As dimens�es dos lados do triângulo devem ser positivas';
+  if (a < 1) {		# face de comprimento não positivo
+    print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
   }
   else {
     if (b < 1) {
-      print 'As dimens�es dos lados do triângulo devem ser positivas';
+      print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
     }
     else {
       if (c < 1) {
-	print 'As dimens�es dos lados do triângulo devem ser positivas';
+	print 'As dimensões dos lados do triÃ¢ngulo devem ser positivas';
       }
       else {
 	if (a + b <= c) {
-	  print 'N�o e um triângulo';
+	  print 'Não e um triÃ¢ngulo';
 	}
 	else {
 	  if (a + c <= b) {
-	    print 'N�o e um triângulo';
+	    print 'Não e um triÃ¢ngulo';
 	  }
 	  else {
 	    if (c + b <= a) {
-	      print 'N�o e um triângulo';
+	      print 'Não e um triÃ¢ngulo';
 	    }
 	    else {
 	      if (a == b) {
 		if (b == c) {
-		  print 'triângulo equil�tero';
+		  print 'triÃ¢ngulo equilátero';
 		}
 		else {
-		  print 'triângulo is�sceles';
+		  print 'triÃ¢ngulo isósceles';
 		}
 	      }
 	      else {
 		if (b == c) {
-		  print 'triângulo is�sceles';
+		  print 'triÃ¢ngulo isósceles';
 		}
 		else {
 		  if (a == c) {
-		    print 'triângulo is�sceles';
+		    print 'triÃ¢ngulo isósceles';
 		  }
 		  else {
-		    print 'triângulo escaleno';
+		    print 'triÃ¢ngulo escaleno';
 		  }
 		}
 	      }

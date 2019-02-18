@@ -2,6 +2,7 @@ LIB=run
 OS=$(ELF32)
 SYS=elf32
 CFLAGS=-g -Dunderscore # -fno-stack-protector # quando __stack_chk_fail em Ubunto
+CC=gcc -m32
 BOOT=$(LIB).o # bootstrap runtime for a C compiler
 RUNTIME=lib$(LIB).a # stand-alone runtime
 
@@ -17,7 +18,7 @@ $(RUNTIME): dbl.o $(OS)
 	ar crl $@ $?
 
 $(BOOT): dbl.o $(OS)
-	ld -r -o  $@ $^
+	ld -melf_i386 -r -o  $@ $^
 
 dbl.o: dbl.c
 	$(CC) $(CFLAGS) -DPOSTFIX -c $<

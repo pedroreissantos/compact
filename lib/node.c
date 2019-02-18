@@ -10,10 +10,10 @@ extern char *strdup(const char *); /* strdup is not ANSI */
 int yyerror(char*);
 extern int yylineno;
 
-Node *newNode(NodeType t, int attrib, int nops) {
+Node *newNode(NodeType t, int attrib, unsigned nops) {
     Node *p;
     size_t size;
-    int i;
+    unsigned i;
 
     /* allocate node */
     size = sizeof(Node) + (t == nodeOpr ? nops * sizeof(Node*) : 0);
@@ -28,6 +28,8 @@ Node *newNode(NodeType t, int attrib, int nops) {
     p->line = yylineno;
     p->user = 0;
     p->state = 0;
+    p->info = -1;
+    p->listen = 0;
     p->place = -1;
     p->value.sub.num = nops;
     if (nops > 0) {
@@ -86,10 +88,10 @@ Node *strNode(int attrib, char *s) {
     return p;
 }
 
-Node *subNode(int oper, int nops, ...) {
+Node *subNode(int oper, unsigned nops, ...) {
     va_list ap;
     Node *p = newNode(nodeOpr, oper, nops);
-    int i;
+    unsigned i;
 
     if (p == NULL) return 0;
     va_start(ap, nops);
@@ -97,6 +99,54 @@ Node *subNode(int oper, int nops, ...) {
 	p->value.sub.n[i] = va_arg(ap, Node*);
     va_end(ap);
     return p;
+}
+
+Node *revNode(int oper, unsigned nops, ...) {
+    va_list ap;
+    Node *p, *q;
+    unsigned i;
+
+    p = newNode(nodeOpr, oper, nops < 3 ? nops : 2);
+    if (p == NULL) return 0;
+    va_start(ap, nops);
+    if (nops > 0)
+	p->value.sub.n[0] = va_arg(ap, Node*);
+    for (i = 1; i < nops; i++) {
+	p->value.sub.n[1] = va_arg(ap, Node*);
+	if (i + 1 >= nops) break;
+        q = newNode(nodeOpr, oper, 2);
+	q->value.sub.n[0] = p;
+        p = q;
+    }
+    va_end(ap);
+    return p;
+}
+
+Node *seqNode(int oper, unsigned nops, ...) {
+    va_list ap;
+    Node *p, *q;
+    unsigned i;
+
+    q = p = newNode(nodeOpr, oper, nops < 3 ? nops : 2);
+    if (p == NULL) return 0;
+    va_start(ap, nops);
+    for (i = 0; i < nops; i++) {
+	p->value.sub.n[0] = va_arg(ap, Node*);
+	if (nops - i < 3) {
+	    p->value.sub.n[1] = va_arg(ap, Node*);
+	    break;
+	} else {
+	    p->value.sub.n[1] = newNode(nodeOpr, oper, nops - i < 3 ? nops - i : 2);
+	    if (p->value.sub.n[1] == NULL) {
+	        freeNode(q);
+		q = 0;
+		break;
+	    }
+	}
+	p = p->value.sub.n[1];
+    }
+    va_end(ap);
+    return q;
 }
 
 Node *addNode(Node *base, Node *node, unsigned pos) {
@@ -140,7 +190,7 @@ void *userNode(Node *p, void *user) {
 
 Node *compareNode(Node *p, Node *n, int full) {
     Node *x;
-    int i;
+    unsigned i;
 
     if (p == n) return 0; /* is the same node */
     if (p->type != n->type) return n;
@@ -173,7 +223,7 @@ Node *compareNode(Node *p, Node *n, int full) {
 Node *copyNode(Node *p) {
     Node *n;
     size_t size = sizeof(Node);
-    int i;
+    unsigned i;
 
     if (p == 0) return 0;
 
@@ -197,7 +247,7 @@ Node *copyNode(Node *p) {
 }
 
 void freeNode(Node *p) {
-    int i;
+    unsigned i;
 
     if (p == 0) return;
     if (p->type == nodeOpr) {
@@ -207,12 +257,14 @@ void freeNode(Node *p) {
     free (p);
 }
 
+int debugNode;
 static int print(Node *p, FILE *fp, char *tab[], int lev) {
-    int i, cnt = 0;
+    unsigned i, cnt = 0;
 
     if (p == 0) return cnt;
     cnt++;
     if (p->type == nodeOpr) fprintf(fp,"\n%*s(", 2*lev, " ");
+    if (debugNode) fprintf(fp," [%lx]", (long)p);
     if (tab != 0)
       fprintf(fp," %s:", tab[p->attrib]);
     else
@@ -224,7 +276,7 @@ static int print(Node *p, FILE *fp, char *tab[], int lev) {
 	case nodeStr: fprintf(fp,"\"%s\"", p->value.s); break;
 	case nodeData:
 	    fprintf(fp,"%d[", p->value.d.size);
-	    for (i = 0; i < p->value.d.size; i++)
+	    for (i = 0; i < (unsigned)p->value.d.size; i++)
 	      fprintf(fp,"%2.2X", ((unsigned char*)p->value.d.data)[i]);
 	    fprintf(fp,"]");
 	    break;
@@ -240,4 +292,63 @@ static int print(Node *p, FILE *fp, char *tab[], int lev) {
 void printNode(Node *p, FILE *fp, char *tab[]) {
     if (fp == 0) fp = stdout;
     fprintf(fp, "\n[#%d]\n", print(p, fp, tab, 0));
+}
+
+void visitNode(Node *p, int mode, void (*func[])(Node*)) {
+    unsigned i;
+    if (p == 0) return;
+    if (mode & PRE && func[p->attrib])
+    	func[p->attrib](p);
+    if (p->type == nodeOpr)
+	for (i = 0; i < p->value.sub.num; i++)
+	    visitNode(p->value.sub.n[i], mode, func);
+    if (mode == POS && func[p->attrib])
+    	func[p->attrib](p);
+}
+
+void listenNode(Node *p, int mode) {
+    unsigned i;
+    if (p == 0) return;
+    if (mode & PRE && p->listen)
+    	p->listen(p);
+    if (p->type == nodeOpr)
+	for (i = 0; i < p->value.sub.num; i++)
+	    listenNode(p->value.sub.n[i], mode);
+    if (mode == POS && p->listen)
+    	p->listen(p);
+}
+
+void listenerNode(Node *p, void (*func)(Node*)) {
+	p->listen = func;
+}
+
+void pathNode(Node *p, FILE *fp, char *tab[], char *base) {
+    unsigned i;
+    char code[12], *comp = code, *name;
+
+    if (p == 0) return;
+    if (fp == 0) fp = stdout;
+    if (tab != 0)
+      comp = tab[p->attrib];
+    else
+      sprintf(code,"%d", p->attrib);
+    name = malloc(strlen(base)+strlen(comp)+2);
+    sprintf(name, "%s/%s", base, comp);
+    switch (p->type) {
+	case nodeNil: fprintf(fp, "%s.\n", name); break;
+	case nodeInt: fprintf(fp,"%s: " PRTREG "\n", name, p->value.i); break;
+	case nodeReal: fprintf(fp,"%s: %g\n", name, p->value.r); break;
+	case nodeStr: fprintf(fp,"%s: \"%s\"\n", name, p->value.s); break;
+	case nodeData:
+	    fprintf(fp,"%s: %d[", name, p->value.d.size);
+	    for (i = 0; i < (unsigned)p->value.d.size; i++)
+	      fprintf(fp,"%2.2X", ((unsigned char*)p->value.d.data)[i]);
+	    fprintf(fp,"]\n");
+	    break;
+	case nodeOpr: 
+	    for (i = 0; i < p->value.sub.num; i++)
+		pathNode(p->value.sub.n[i], fp, tab, name);
+	    break;
+    }
+    free(name);
 }

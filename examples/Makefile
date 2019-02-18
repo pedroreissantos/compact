@@ -1,13 +1,13 @@
-BIN=../c++/Compact
+#BIN=../c++/Compact
 #BIN=java -jar ../java/javaVisitor/Compact.jar
-#BIN=../demo/compact
+BIN=../demo/compact
 RUN=../runtime/librun.a
 EXT=.cpt
 
 .SUFFIXES: $(EXT) .asm
 LOADLIBS=$(RUN)
-NASM=nasm -felf
-#LD=ld -m elf_i386 # for 64-bit linux
+NASM=nasm -felf32
+LD=ld -m elf_i386 # for 64-bit linux
 
 all:
 	for i in *$(EXT); do $(MAKE) $(MFLAGS) `basename $$i $(EXT)`; done
@@ -19,7 +19,7 @@ all:
 	$(LD) $< $(RUN) -o $@
 
 $(EXT).asm:
-	$(BIN) $<
+	$(BIN) $< > $@
 
 clean:
 	rm -f *.o core a.out *.asm *~
