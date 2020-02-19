@@ -72,6 +72,7 @@ void pathNode(Node *p, FILE *fp, char *tab[], char *base);
 extern int debugNode;
 
 #define CHILD(x)	value.sub.n[x]
+#define SUB(x)	value.sub.n[x]
 
 #define POS 0
 #define PRE 1
