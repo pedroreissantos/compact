@@ -9,12 +9,15 @@
 #include "node.h"
 #include "tabid.h"
 #include "postfix.h"
+#ifndef pfCAST
+#define pfCAST
+#endif
 
 static int sameVar(NODEPTR_TYPE p) {
-  return strcmp(LEFT_CHILD(p)->value.s, LEFT_CHILD(RIGHT_CHILD(p))->value.s) ? 0x7fff : 2;
+  return strcmp(LEFT_CHILD(p)->value.s, LEFT_CHILD(RIGHT_CHILD(p))->value.s) ? 1000 : 2;
 }
 
-extern FILE *outfp;
+extern FILE *yyout;
 extern int lbl;
 extern char *mklbl(int n);
 %}
@@ -23,49 +26,49 @@ extern char *mklbl(int n);
 %%
 stat:	LIST(stat,stat)
 stat:	STRING		9 { char *l = mklbl(++lbl);
-			    fprintf(outfp, pfRODATA pfALIGN pfLABEL pfSTR
+			    fprintf(yyout, pfRODATA pfALIGN pfLABEL pfSTR
 				pfTEXT pfADDR pfCALL pfCALL pfTRASH,
-				l, p->value.s, l, "_prints", "_println", 4); }
-stat:	PRINT(reg)	3 { fprintf(outfp, pfCALL pfCALL pfTRASH,
-				"_printi", "_println", 4); }
-stat:	READ		1 { fprintf(outfp, pfCALL pfPUSH pfADDRA, "_readi", p->value.s); }
-stat:	JZ(reg,ETIQ)	1 { fprintf(outfp, pfJZ, p->SUB(1)->value.s); }
-stat:	JNZ(reg,ETIQ)	1 { fprintf(outfp, pfJNZ, p->SUB(1)->value.s); }
-stat:	JMP		1 { fprintf(outfp, pfJMP, p->value.s); }
-stat:	LABEL		  { fprintf(outfp, pfLABEL, p->value.s); }
+				l, p->value.s, l, "_prints", "_println", pfWORD); }
+stat:	PRINT(reg)	3 { fprintf(yyout, pfCALL pfCALL pfTRASH,
+				"_printi", "_println", pfWORD); }
+stat:	READ		1 { fprintf(yyout, pfCALL pfPUSH pfADDRA, "_readi", p->value.s); }
+stat:	JZ(reg,ETIQ)	1 { fprintf(yyout, pfJZ, p->SUB(1)->value.s); }
+stat:	JNZ(reg,ETIQ)	1 { fprintf(yyout, pfJNZ, p->SUB(1)->value.s); }
+stat:	JMP		1 { fprintf(yyout, pfJMP, p->value.s); }
+stat:	LABEL		  { fprintf(yyout, pfLABEL, p->value.s); }
 stat:	ASSIGN(VARIABLE,reg)   1 {
-		fprintf(outfp, pfADDRA, p->SUB(0)->value.s); }
-stat:	JZ(LT(reg,reg), ETIQ)	1 { fprintf(outfp, pfJGE, p->SUB(1)->value.s); }
-stat:	JZ(LE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJGT, p->SUB(1)->value.s); }
-stat:	JZ(GT(reg,reg), ETIQ)	1 { fprintf(outfp, pfJLE, p->SUB(1)->value.s); }
-stat:	JZ(GE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJLT, p->SUB(1)->value.s); }
-stat:	JZ(EQ(reg,reg), ETIQ)	1 { fprintf(outfp, pfJNE, p->SUB(1)->value.s); }
-stat:	JZ(NE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJEQ, p->SUB(1)->value.s); }
-stat:	JNZ(LT(reg,reg), ETIQ)	1 { fprintf(outfp, pfJLT, p->SUB(1)->value.s); }
-stat:	JNZ(LE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJLE, p->SUB(1)->value.s); }
-stat:	JNZ(GT(reg,reg), ETIQ)	1 { fprintf(outfp, pfJGT, p->SUB(1)->value.s); }
-stat:	JNZ(GE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJGE, p->SUB(1)->value.s); }
-stat:	JNZ(EQ(reg,reg), ETIQ)	1 { fprintf(outfp, pfJEQ, p->SUB(1)->value.s); }
-stat:	JNZ(NE(reg,reg), ETIQ)	1 { fprintf(outfp, pfJNE, p->SUB(1)->value.s); }
+		fprintf(yyout, pfADDRA, p->SUB(0)->value.s); }
+stat:	JZ(LT(reg,reg), ETIQ)	1 { fprintf(yyout, pfJGE, p->SUB(1)->value.s); }
+stat:	JZ(LE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJGT, p->SUB(1)->value.s); }
+stat:	JZ(GT(reg,reg), ETIQ)	1 { fprintf(yyout, pfJLE, p->SUB(1)->value.s); }
+stat:	JZ(GE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJLT, p->SUB(1)->value.s); }
+stat:	JZ(EQ(reg,reg), ETIQ)	1 { fprintf(yyout, pfJNE, p->SUB(1)->value.s); }
+stat:	JZ(NE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJEQ, p->SUB(1)->value.s); }
+stat:	JNZ(LT(reg,reg), ETIQ)	1 { fprintf(yyout, pfJLT, p->SUB(1)->value.s); }
+stat:	JNZ(LE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJLE, p->SUB(1)->value.s); }
+stat:	JNZ(GT(reg,reg), ETIQ)	1 { fprintf(yyout, pfJGT, p->SUB(1)->value.s); }
+stat:	JNZ(GE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJGE, p->SUB(1)->value.s); }
+stat:	JNZ(EQ(reg,reg), ETIQ)	1 { fprintf(yyout, pfJEQ, p->SUB(1)->value.s); }
+stat:	JNZ(NE(reg,reg), ETIQ)	1 { fprintf(yyout, pfJNE, p->SUB(1)->value.s); }
 
-stat:	reg 1 { fprintf(outfp, pfTRASH, 4); }
-reg:	VARIABLE 1 { fprintf(outfp, pfADDRV, p->value.s); }
-reg:	INTEGER 1 { fprintf(outfp, pfIMM, p->value.i); }
-reg:	ADD(reg,reg)	1 { fprintf(outfp, pfADD); }
-reg:	SUB(reg,reg)	1 { fprintf(outfp, pfSUB); }
-reg:	UMINUS(reg)	1 { fprintf(outfp, pfNEG); } 
-reg:	MUL(reg,reg)	1 { fprintf(outfp, pfMUL); }
-reg:	DIV(reg,reg)	1 { fprintf(outfp, pfDIV); }
-reg:	MOD(reg,reg)	1 { fprintf(outfp, pfMOD); }
-reg:	EQ(reg,reg)	1 { fprintf(outfp, pfEQ); }
-reg:	NE(reg,reg)	1 { fprintf(outfp, pfNE); }
-reg:	LT(reg,reg)	1 { fprintf(outfp, pfLT); }
-reg:	LE(reg,reg)	1 { fprintf(outfp, pfLE); }
-reg:	GE(reg,reg)	1 { fprintf(outfp, pfGE); }
-reg:	GT(reg,reg)	1 { fprintf(outfp, pfGT); }
+stat:	reg 1 { fprintf(yyout, pfTRASH, pfWORD); }
+reg:	VARIABLE 1 { fprintf(yyout, pfADDRV, p->value.s); }
+reg:	INTEGER 1 { fprintf(yyout, pfIMM, p->value.i); }
+reg:	ADD(reg,reg)	1 { fprintf(yyout, pfADD); }
+reg:	SUB(reg,reg)	1 { fprintf(yyout, pfSUB); }
+reg:	UMINUS(reg)	1 { fprintf(yyout, pfNEG); } 
+reg:	MUL(reg,reg)	1 { fprintf(yyout, pfMUL); }
+reg:	DIV(reg,reg)	1 { fprintf(yyout, pfDIV); }
+reg:	MOD(reg,reg)	1 { fprintf(yyout, pfMOD); }
+reg:	EQ(reg,reg)	1 { fprintf(yyout, pfEQ); }
+reg:	NE(reg,reg)	1 { fprintf(yyout, pfNE); }
+reg:	LT(reg,reg)	1 { fprintf(yyout, pfLT); }
+reg:	LE(reg,reg)	1 { fprintf(yyout, pfLE); }
+reg:	GE(reg,reg)	1 { fprintf(yyout, pfGE); }
+reg:	GT(reg,reg)	1 { fprintf(yyout, pfGT); }
 
 stat:	ASSIGN(VARIABLE,ADD(VARIABLE,INTEGER))	sameVar {
-		fprintf(outfp, pfADDR pfINCR, LEFT_CHILD(p)->value.s, RIGHT_CHILD(RIGHT_CHILD(p))->value.i);
+		fprintf(yyout, pfADDR pfINCR, LEFT_CHILD(p)->value.s, RIGHT_CHILD(RIGHT_CHILD(p))->value.i);
 	}
 %%
 #include "y.tab.h"
@@ -73,7 +76,7 @@ stat:	ASSIGN(VARIABLE,ADD(VARIABLE,INTEGER))	sameVar {
 extern char **yynames;
 
 static int data(int t, char *s, int a, int user) {
-  if (s) fprintf(outfp, pfLABEL pfINTEGER, s, 0);
+  if (s) fprintf(yyout, pfLABEL pfCONST, s, pfCAST 0);
   return 1;
 }
 
@@ -82,10 +85,10 @@ void evaluate(Node *p) {
 
   if (errors) return;
   if (trace) printNode(p, stdout, yynames);
-  fprintf(outfp, pfTEXT pfALIGN pfGLOBL pfLABEL, "_main", pfFUNC, "_main");
+  fprintf(yyout, pfTEXT pfALIGN pfGLOBL pfLABEL, "_main", pfFUNC, "_main");
   yyselect(p);
-  fprintf(outfp, pfRET pfDATA);
+  fprintf(yyout, pfRET pfDATA);
   IDevery(data,0);
-  fprintf(outfp, pfEXTRN pfEXTRN pfEXTRN pfEXTRN,
+  fprintf(yyout, pfEXTRN pfEXTRN pfEXTRN pfEXTRN,
   		"_prints", "_printi", "_println", "_readi");
 }

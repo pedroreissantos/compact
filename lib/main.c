@@ -9,7 +9,7 @@
 
 char *ext = ".asm", *prog, *infile = "<<stdin>>", *outfile = "out.asm";
 int errors, opt, tree, trace, yyparse(void);
-FILE *outfp;
+extern FILE *yyout;
 extern int IDdebug;
 
 int yyerror(char *s)
@@ -64,17 +64,17 @@ int main(int argc, char *argv[]) {
   }
   if (argc > 2) outfile = argv[2];
 
-  if ((outfp = fopen(outfile, "w")) == NULL) {
+  if ((yyout = fopen(outfile, "w")) == NULL) {
     perror(outfile);
     return 1;
   }
 
   if (yyparse() != 0 || errors > 0) {
     fprintf(stderr, "%d errors in %s\n", errors, infile);
-    fclose(outfp);
+    fclose(yyout);
     unlink(outfile);
     return 1;
   }
-  fclose(outfp);
+  fclose(yyout);
   return 0;
 }

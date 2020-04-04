@@ -21,7 +21,7 @@ static const char *name[] = { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7"
 static char busy[NREG];
 static int getReg();
 
-extern FILE *outfp;
+extern FILE *yyout;
 
 extern int lbl;
 static char *mklbl(int n) {
@@ -31,7 +31,7 @@ static char *mklbl(int n) {
 }
 
 static void jcond(Node *p, char *cond) {
-  fprintf(outfp, " cmp %s, %s\n %s %s\n",
+  fprintf(yyout, " cmp %s, %s\n %s %s\n",
 	  name[PLACE(p->SUB(0)->SUB(0))],
 	  name[PLACE(p->SUB(0)->SUB(1))],
 	  cond, p->SUB(1)->value.s);
@@ -44,37 +44,37 @@ static void idiv(int op, Node *p) {
   int a = 0, b = 1;
   if (PLACE(LEFT_CHILD(p)) == b && PLACE(RIGHT_CHILD(p)) == a) {
     /* swap arguments */
-    fprintf(outfp, " push {r0}\n mov r0, r1\n pop{r1}\n");
+    fprintf(yyout, " push {r0}\n mov r0, r1\n pop{r1}\n");
   } else {
     if (PLACE(LEFT_CHILD(p)) != a) {
       a = PLACE(LEFT_CHILD(p));
-      fprintf(outfp, " push {r0}\n mov r0, %s\n", name[a]);
+      fprintf(yyout, " push {r0}\n mov r0, %s\n", name[a]);
     }
     if (PLACE(RIGHT_CHILD(p)) != b) {
       b = PLACE(RIGHT_CHILD(p));
       if (a == 1) b = 1; /* do not save the first argument */
-      else fprintf(outfp, " push {r1}\n");
-      fprintf(outfp, " mov r1, %s\n", name[PLACE(RIGHT_CHILD(p))]);
+      else fprintf(yyout, " push {r1}\n");
+      fprintf(yyout, " mov r1, %s\n", name[PLACE(RIGHT_CHILD(p))]);
     }
   }
   PLACE(p) = PLACE(LEFT_CHILD(p));
   busy[PLACE(RIGHT_CHILD(p))] = 0;
-  fprintf(outfp, " bl %s\n", op ? "_mod" : "_div");
+  fprintf(yyout, " bl %s\n", op ? "_mod" : "_div");
   if (a != 0)
-    fprintf(outfp, " mov %s, r0\n pop {r0}\n", name[PLACE(p)]);
-  if (b != 1) fprintf(outfp, " pop {r1}\n");
+    fprintf(yyout, " mov %s, r0\n pop {r0}\n", name[PLACE(p)]);
+  if (b != 1) fprintf(yyout, " pop {r1}\n");
 }
 
 static void binop(char *op, Node *p) {
   PLACE(p)=PLACE(LEFT_CHILD(p));
-  fprintf(outfp, " %s %s, %s, %s\n", op, name[PLACE(p)], name[PLACE(LEFT_CHILD(p))],
+  fprintf(yyout, " %s %s, %s, %s\n", op, name[PLACE(p)], name[PLACE(LEFT_CHILD(p))],
 			  name[PLACE(RIGHT_CHILD(p))]);
   busy[PLACE(RIGHT_CHILD(p))]=0;
 }
 
 static void cmpop(char *op, char *inv, Node *p) {
   PLACE(p)=PLACE(LEFT_CHILD(p));
-  fprintf(outfp, " cmp %s, %s\n mov%s %s, #1\n mov%s %s, #0\n",
+  fprintf(yyout, " cmp %s, %s\n mov%s %s, #1\n mov%s %s, #0\n",
       name[PLACE(LEFT_CHILD(p))], name[PLACE(RIGHT_CHILD(p))],
       op, name[PLACE(p)], inv, name[PLACE(p)]);
   busy[PLACE(RIGHT_CHILD(p))]=0;
@@ -85,22 +85,22 @@ static void cmpop(char *op, char *inv, Node *p) {
 %include "y.tab.h"
 %%
 stat:  LIST(stat,stat)
-stat:  STRING 2 { char *l = mklbl(++lbl); fprintf(outfp, ".section .rodata\n.align 2\n%s: .asciz \"%s\"\n.section .text\n ldr r0, =%s\n bl _prints\n bl _println\n", l, p->value.s, l); }
-stat:  PRINT(reg) 3 { fprintf(outfp, " mov r0, %s\n bl _printi\n bl _println\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))]); busy[PLACE(LEFT_CHILD(p))]=0; }
-stat:  READ 3 { fprintf(outfp, " bl _readi\n ldr r1, =%s\n str r0, [r1]\n", p->value.s); }
+stat:  STRING 2 { char *l = mklbl(++lbl); fprintf(yyout, ".section .rodata\n.align 2\n%s: .asciz \"%s\"\n.section .text\n ldr r0, =%s\n bl _prints\n bl _println\n", l, p->value.s, l); }
+stat:  PRINT(reg) 3 { fprintf(yyout, " mov r0, %s\n bl _printi\n bl _println\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))]); busy[PLACE(LEFT_CHILD(p))]=0; }
+stat:  READ 3 { fprintf(yyout, " bl _readi\n ldr r1, =%s\n str r0, [r1]\n", p->value.s); }
 stat:  JZ(reg,ETIQ) 2 {
-		fprintf(outfp, " cmp %s, #0\n beq %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
+		fprintf(yyout, " cmp %s, #0\n beq %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
 			p->SUB(1)->value.s);
                 busy[PLACE(LEFT_CHILD(p))]=0; }
 stat:  JNZ(reg,ETIQ) 2 {
-		fprintf(outfp, " cmp %s, #0\n bne %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
+		fprintf(yyout, " cmp %s, #0\n bne %s\n", name[PLACE(p)=PLACE(LEFT_CHILD(p))],
 			p->SUB(1)->value.s);
                 busy[PLACE(LEFT_CHILD(p))]=0; }
-stat:  JMP 1 { fprintf(outfp, " b %s\n", p->value.s); }
-stat:  LABEL { fprintf(outfp, "%s:\n", p->value.s); }
+stat:  JMP 1 { fprintf(yyout, " b %s\n", p->value.s); }
+stat:  LABEL { fprintf(yyout, "%s:\n", p->value.s); }
 stat:  ASSIGN(VARIABLE,reg)   19 { int r = getReg();
 		IDnew(0, LEFT_CHILD(p)->value.s, IDtest);
-                fprintf(outfp, " ldr %s, =%s\n str %s, [%s]\n",
+                fprintf(yyout, " ldr %s, =%s\n str %s, [%s]\n",
                         name[r], LEFT_CHILD(p)->value.s,
                         name[PLACE(RIGHT_CHILD(p))], name[r]);
                 busy[r] = 0;
@@ -119,12 +119,12 @@ stat:   JNZ(EQ(reg,reg), ETIQ)    2 { jcond(p, "beq"); }
 stat:   JNZ(NE(reg,reg), ETIQ)    2 { jcond(p, "bne"); }
 
 stat:  reg { busy[PLACE(p)] = 0; /* free reg */ }
-reg:   VARIABLE 2 { fprintf(outfp, " ldr %s, =%s\n ldr %s, [%s]\n", name[PLACE(p) = getReg()], p->value.s, name[PLACE(p)], name[PLACE(p)]); }
-reg:   INTEGER 2 { fprintf(outfp, " ldr %s, =%d\n", name[PLACE(p) = getReg()], p->value.i); }
+reg:   VARIABLE 2 { fprintf(yyout, " ldr %s, =%s\n ldr %s, [%s]\n", name[PLACE(p) = getReg()], p->value.s, name[PLACE(p)], name[PLACE(p)]); }
+reg:   INTEGER 2 { fprintf(yyout, " ldr %s, =%d\n", name[PLACE(p) = getReg()], p->value.i); }
 reg:   ADD(reg,reg)     1 { binop("add", p); }
 reg:   SUB(reg,reg)    1 { binop("sub", p); }
 reg:   UMINUS(reg)       1 { PLACE(p)=PLACE(LEFT_CHILD(p));
-                fprintf(outfp, " rsb %s, %s, #0\n", name[PLACE(p)], name[PLACE(LEFT_CHILD(p))]); }
+                fprintf(yyout, " rsb %s, %s, #0\n", name[PLACE(p)], name[PLACE(LEFT_CHILD(p))]); }
 
 reg:   MUL(reg,reg)   3 { binop("mul", p); }
 reg:   DIV(reg,reg)   3 { idiv(0, p); }
@@ -154,7 +154,7 @@ static int getReg()
 extern char **yynames;
 
 static int data(int t, char *s, int a, int user) {
-  if (s) fprintf(outfp, " %s: .word 0\n", s);
+  if (s) fprintf(yyout, " %s: .word 0\n", s);
   return 1;
 }
 
@@ -164,11 +164,11 @@ void evaluate(Node *p) {
 
   if (errors) return;
   if (trace) printNode(p, stdout, yynames);
-  fprintf(outfp, ".section .text\n.align 2\n.global _main\n.type _main, %%function\n_main:\n stmfd sp!, {lr}\n");
+  fprintf(yyout, ".section .text\n.align 2\n.global _main\n.type _main, %%function\n_main:\n stmfd sp!, {lr}\n");
   if (yyselect(p) == 1)
       yyerror("No match for instruction selection");
-  fprintf(outfp, " mov r0, #0\n ldmfd sp!, {pc}\n");
-  fprintf(outfp, ".section .data\n");
+  fprintf(yyout, " mov r0, #0\n ldmfd sp!, {pc}\n");
+  fprintf(yyout, ".section .data\n");
   IDevery(data, 0);
-  fprintf(outfp, ".extern _prints\n.extern _printi\n.extern _println\n.extern _readi\n");
+  fprintf(yyout, ".extern _prints\n.extern _printi\n.extern _println\n.extern _readi\n");
 }
