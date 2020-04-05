@@ -8,7 +8,7 @@
 #include <ctype.h>
 
 char *ext = ".asm", *prog, *infile = "<<stdin>>", *outfile = "out.asm";
-int errors, opt, tree, trace, yyparse(void);
+int errors, opt, tree, trace, initial, yyparse(void);
 extern FILE *yyout;
 extern int IDdebug;
 
@@ -32,16 +32,19 @@ char *dupstr(const char *s)
 }
 
 int main(int argc, char *argv[]) {
+  extern int yy_flex_debug;
 #ifdef YYDEBUG
   extern int yydebug;
   yydebug = getenv("YYDEBUG") ? 1 : 0;
 #endif
+  yy_flex_debug = getenv("LEXDBUG") ? 1 : 0;
 
   prog = argv[0];
 
+  if (argc > 1 && strcmp(argv[1], "-initial") == 0) { initial = 1; argc--; argv++; ext = ".out"; outfile = "out.out"; }
   if (argc > 1 && strcmp(argv[1], "-trace") == 0) { IDdebug = trace = 1; argc--; argv++; }
   if (argc > 3) {
-    fprintf(stderr, "USAGE: %s [-trace] [infile]\n",
+    fprintf(stderr, "USAGE: %s [-initial] [-trace] [infile [outfile]]\n",
 	    argv[0]);
     exit(1);
   }
@@ -67,6 +70,17 @@ int main(int argc, char *argv[]) {
   if ((yyout = fopen(outfile, "w")) == NULL) {
     perror(outfile);
     return 1;
+  }
+
+  if (initial) {
+    int tk, yylex();
+    extern char **yynames;
+    while ((tk = yylex())) 
+      if (tk > 255)
+        printf("%d:\t%s\n", tk, yynames[tk]);
+      else
+        printf("%d:\t%c\n", tk, tk);
+    return 0;
   }
 
   if (yyparse() != 0 || errors > 0) {
