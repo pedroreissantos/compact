@@ -5,7 +5,7 @@ CC=gcc
 all: lib$(LIB).a
 
 lib$(LIB).a: node.o tabid.o main.o
-	ar crl $@ $?
+	ar crv $@ $?
 
 malloc.o: malloc.c
 	$(COMPILE.c) -Drcheck=2 $<

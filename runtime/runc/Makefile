@@ -1,4 +1,4 @@
-AR=ar crl
+AR=ar crv
 LD=ld -r -o
 CFLAGS=-g -Dunderscore # -fno-stack-protector # quando __stack_chk_fail em Ubunto
 

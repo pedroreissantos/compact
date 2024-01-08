@@ -14,7 +14,7 @@ NASM=nasm -f$(SYS)
 all: $(RUNTIME) $(BOOT)
 
 $(RUNTIME): dbl.o $(OS)
-	ar crl $@ $?
+	ar crv $@ $?
 
 $(BOOT): dbl.o $(OS)
 	ld -r -o  $@ $^

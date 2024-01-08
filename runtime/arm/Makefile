@@ -5,7 +5,7 @@ OBJ=arm.o lib.o sys.o stk.o dbl.o soft.o
 all: $(LDLIBS) $(LDOBJ)
 
 $(LDLIBS): $(OBJ)
-	ar crl $@ $?
+	ar crv $@ $?
 
 $(LDOBJ): $(OBJ)
 	ld -r -o $@ $?
